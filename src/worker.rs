@@ -39,6 +39,16 @@ pub struct WorkerHandle {
     join_handles: Vec<thread::JoinHandle<()>>,
 }
 
+impl Clone for WorkerHandle {
+    fn clone(&self) -> Self {
+        WorkerHandle {
+            sender: self.sender.clone(),
+            worker_count: self.worker_count,
+            join_handles: Vec::new(),
+        }
+    }
+}
+
 impl WorkerHandle {
     /// Spawns a pool of `num_workers` dedicated OS threads, each hosting an isolated Zend VM.
     ///
@@ -133,13 +143,11 @@ impl WorkerHandle {
             respond_to: tx,
         };
 
-        if let Some(sender) = &self.sender {
-            sender
-                .send(job)
-                .map_err(|e| format!("Failed to dispatch job to worker: {}", e))?;
-        } else {
-            return Err("Worker pool is shutting down".to_string());
-        }
+        self.sender
+            .as_ref()
+            .ok_or_else(|| "Worker pool shut down".to_string())?
+            .send(job)
+            .map_err(|e| format!("Failed to dispatch job to worker: {}", e))?;
 
         rx.await
             .map_err(|_| "Worker dropped response channel".to_string())
