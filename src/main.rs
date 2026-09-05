@@ -148,6 +148,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let (tx, rx) = std::sync::mpsc::channel();
                 if let Ok(mut watcher) = notify::recommended_watcher(tx) {
                     let _ = watcher.watch(std::path::Path::new("."), RecursiveMode::Recursive);
+                    let mut last_reload = std::time::Instant::now();
                     for res in rx {
                         match res {
                             Ok(event) => {
@@ -156,14 +157,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     .iter()
                                     .any(|p| p.extension().is_some_and(|ext| ext == "php"))
                                 {
-                                    println!("🔄 [RestPHP] Detected PHP file change. Recycling workers...");
-                                    if let Ok(new_worker) =
-                                        restphp::WorkerHandle::new_pool(workers, max_requests)
+                                    if last_reload.elapsed() < std::time::Duration::from_millis(500)
                                     {
-                                        tokio::runtime::Handle::current().block_on(async {
-                                            *watcher_worker.write().await = new_worker;
-                                        });
+                                        continue;
                                     }
+                                    last_reload = std::time::Instant::now();
+                                    println!("🔄 [RestPHP] Detected PHP file change. Recycling workers...");
+                                    tokio::runtime::Handle::current().block_on(async {
+                                        let mut pool = watcher_worker.write().await;
+                                        pool.shutdown();
+                                        if let Ok(new_worker) =
+                                            restphp::WorkerHandle::new_pool(workers, max_requests)
+                                        {
+                                            *pool = new_worker;
+                                        }
+                                    });
                                 }
                             }
                             Err(e) => println!("watch error: {:?}", e),

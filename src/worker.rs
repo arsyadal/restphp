@@ -33,10 +33,10 @@ pub struct WorkerJob {
 static TOTAL_REQUESTS: AtomicU64 = AtomicU64::new(0);
 
 /// Handle to the worker pool, cheaply cloneable.
-#[derive(Clone)]
 pub struct WorkerHandle {
-    sender: Sender<WorkerJob>,
+    sender: Option<Sender<WorkerJob>>,
     worker_count: usize,
+    join_handles: Vec<thread::JoinHandle<()>>,
 }
 
 impl WorkerHandle {
@@ -49,15 +49,17 @@ impl WorkerHandle {
     pub fn new_pool(num_workers: usize, max_requests: u64) -> Result<Self, String> {
         let num_workers = num_workers.max(1);
         let (sender, receiver) = bounded::<WorkerJob>(num_workers * 256);
+        let mut join_handles = Vec::with_capacity(num_workers);
 
         for i in 0..num_workers {
             let rx = receiver.clone();
-            thread::Builder::new()
+            let handle = thread::Builder::new()
                 .name(format!("restphp-worker-{}", i))
                 .spawn(move || {
                     worker_loop(i, rx, max_requests);
                 })
                 .map_err(|e| format!("Failed to spawn worker-{}: {}", i, e))?;
+            join_handles.push(handle);
         }
 
         println!(
@@ -71,8 +73,9 @@ impl WorkerHandle {
         );
 
         Ok(WorkerHandle {
-            sender,
+            sender: Some(sender),
             worker_count: num_workers,
+            join_handles,
         })
     }
 
@@ -130,12 +133,26 @@ impl WorkerHandle {
             respond_to: tx,
         };
 
-        self.sender
-            .send(job)
-            .map_err(|e| format!("Failed to dispatch job to worker: {}", e))?;
+        if let Some(sender) = &self.sender {
+            sender
+                .send(job)
+                .map_err(|e| format!("Failed to dispatch job to worker: {}", e))?;
+        } else {
+            return Err("Worker pool is shutting down".to_string());
+        }
 
         rx.await
             .map_err(|_| "Worker dropped response channel".to_string())
+    }
+
+    /// Shuts down the worker pool gracefully by closing the channel and joining threads.
+    pub fn shutdown(&mut self) {
+        if let Some(sender) = self.sender.take() {
+            drop(sender); // Closes the channel, threads will exit loop
+        }
+        for handle in self.join_handles.drain(..) {
+            let _ = handle.join();
+        }
     }
 }
 

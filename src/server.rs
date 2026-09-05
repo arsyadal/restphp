@@ -77,21 +77,23 @@ async fn handle_php_request(
 
     let target = ExecutionTarget::File(std::path::PathBuf::from(state.default_script.clone()));
 
-    let worker = state.worker.read().await.clone();
+    let php_resp = {
+        let worker_guard = state.worker.read().await;
+        worker_guard
+            .dispatch_with_headers(
+                target,
+                method_str,
+                uri_str,
+                query_str,
+                body_vec,
+                header_list,
+                cookie,
+                content_type,
+            )
+            .await
+    };
 
-    match worker
-        .dispatch_with_headers(
-            target,
-            method_str,
-            uri_str,
-            query_str,
-            body_vec,
-            header_list,
-            cookie,
-            content_type,
-        )
-        .await
-    {
+    match php_resp {
         Ok(php_resp) => {
             let status = StatusCode::from_u16(php_resp.status).unwrap_or(StatusCode::OK);
             let mut response = Response::builder().status(status);
