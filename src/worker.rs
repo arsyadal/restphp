@@ -1,12 +1,7 @@
-use crate::sapi::{PhpEngine, PhpResponse};
+use crate::sapi::{ExecutionTarget, PhpEngine, PhpResponse};
 use crossbeam_channel::{bounded, Sender};
 use std::thread;
 use tokio::sync::oneshot;
-
-pub enum ExecutionTarget {
-    File(String),
-    Code(String),
-}
 
 pub struct WorkerJob {
     pub target: ExecutionTarget,
@@ -43,10 +38,14 @@ impl WorkerHandle {
 
                 while let Ok(job) = receiver.recv() {
                     let resp = match job.target {
-                        ExecutionTarget::File(ref path) => {
-                            engine.execute_file(path, &job.method, &job.uri, &job.query, &job.body)
-                        }
-                        ExecutionTarget::Code(ref code) => engine.execute_string(
+                        ExecutionTarget::File(ref path) => engine.execute_file(
+                            path.to_string_lossy().as_ref(),
+                            &job.method,
+                            &job.uri,
+                            &job.query,
+                            &job.body,
+                        ),
+                        ExecutionTarget::Inline(ref code) => engine.execute_string(
                             code,
                             &job.method,
                             &job.uri,

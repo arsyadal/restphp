@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use restphp::worker::{ExecutionTarget, WorkerHandle};
+use restphp::{ExecutionTarget, WorkerHandle};
 
 #[derive(Parser)]
 #[command(name = "restphp")]
@@ -66,13 +66,18 @@ echo json_encode([
                 println!("✨ Created sample entrypoint file at: {}", entrypoint);
             }
 
+            // Resolve absolute path for the entrypoint
+            let entrypoint = std::fs::canonicalize(&entrypoint)
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or(entrypoint);
+
             restphp::server::run_http_server(&host, port, &entrypoint, worker).await?;
         }
         Some(Commands::Eval { code }) => {
             let worker = WorkerHandle::new().map_err(|e| format!("Worker init failed: {}", e))?;
             let resp = worker
                 .dispatch(
-                    ExecutionTarget::Code(code),
+                    ExecutionTarget::Inline(code),
                     "CLI".into(),
                     "/cli".into(),
                     "".into(),
@@ -111,6 +116,10 @@ echo json_encode([
 "#;
                 let _ = std::fs::write(&entrypoint, sample_code);
             }
+
+            let entrypoint = std::fs::canonicalize(&entrypoint)
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or(entrypoint);
 
             restphp::server::run_http_server("0.0.0.0", 8080, &entrypoint, worker).await?;
         }

@@ -1,4 +1,5 @@
-use crate::worker::{ExecutionTarget, WorkerHandle};
+use crate::sapi::ExecutionTarget;
+use crate::worker::WorkerHandle;
 use axum::{
     body::Bytes,
     extract::State,
@@ -55,7 +56,7 @@ async fn handle_php_request(
     let query_str = uri.query().unwrap_or("").to_string();
     let body_vec = body.to_vec();
 
-    let target = ExecutionTarget::File(state.default_script.clone());
+    let target = ExecutionTarget::File(std::path::PathBuf::from(state.default_script.clone()));
 
     match state
         .worker
