@@ -4,10 +4,7 @@ layout: home
 hero:
   name: "RestPHP"
   text: "The Blazing-Fast PHP Runtime"
-  tagline: "Persistent Application Server & Runtime powered by Rust. Zero Host GC. Zero CGO Overhead. Crushing FrankenPHP, RoadRunner, and Swoole."
-  image:
-    src: /logo.svg
-    alt: RestPHP Logo
+  tagline: "Persistent Application Server & Runtime powered by Rust. Zero Host GC. Zero CGO Overhead. Outperforming FrankenPHP, RoadRunner, and Swoole."
   actions:
     - theme: brand
       text: Get Started →
