@@ -1,0 +1,37 @@
+[package]
+name = "restphp"
+version = "0.1.0"
+edition = "2021"
+authors = ["RestPHP Team"]
+description = "Blazing-fast persistent application server and runtime for PHP powered by Rust"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tokio = { version = "1.38", features = ["full"] }
+axum = { version = "0.7", features = ["tokio", "http1", "http2"] }
+hyper = { version = "1.4", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+bytes = "1.6"
+crossbeam-channel = "0.5"
+clap = { version = "4.5", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+notify = { version = "6.1", optional = true }
+
+[build-dependencies]
+bindgen = { version = "0.69", optional = true }
+cc = "1.0"
+
+[features]
+default = ["hot-reload"]
+hot-reload = ["dep:notify"]
+generate-bindings = ["dep:bindgen"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
