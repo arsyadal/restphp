@@ -1,4 +1,4 @@
-# BRIEFING — 2026-09-05T05:29:20Z
+# BRIEFING — 2026-09-05T05:34:15Z
 
 ## Mission
 Extract and document the comprehensive specification, feature inventory, acceptance criteria, CLI options, HTTP semantics, PHP superglobals mapping, and edge cases for RestPHP.
@@ -22,17 +22,21 @@ Extract and document the comprehensive specification, feature inventory, accepta
 - Updated: not yet
 
 ## Task Summary
-- **What to build**: Specification inventory and mapping for RestPHP (an embedded PHP SAPI in Rust using Zend Engine C-FFI with persistent workers)
+- **What to build**: Comprehensive specification mining and feature report for RestPHP
 - **Success criteria**: Comprehensive feature tables, edge case tables, detailed superglobals mapping, CLI options, HTTP semantics, acceptance criteria
-- **Interface contracts**: SPEC.md, PRD.md, ROADMAP.md, README.md, ORIGINAL_REQUEST.md
+- **Interface contracts**: SPEC.md, PRD.md, ROADMAP.md, README.md, ORIGINAL_REQUEST.md, main/SAPI.h, main/php_main.h
 - **Code layout**: /home/cads/restphp/src, /home/cads/restphp/examples
 
 ## Key Decisions Made
-- Initializing survey of all primary spec documents and existing codebase files.
+- Discovered that Debian PHP 8.4 is NTS (`#undef ZTS`), meaning all Zend VM execution must be pinned to a single OS worker thread per process (or multi-process).
+- Identified critical null-pointer vulnerability in Zend Engine: `sapi_activate` unconditionally calls `sapi_module.read_cookies` without a null check; it must never be NULL.
+- Confirmed multi-cycle state isolation: `php_request_startup` -> `php_request_shutdown` cleanly purges global variables, functions, and triggers Zend GC.
+- Generated 33 discovered features across 6 categories and 14 edge cases with exact inputs, outputs, and observed behaviors.
 
 ## Artifact Index
 - /home/cads/restphp/.agents/teamwork_preview_spec_miner_survey_1/handoff.md — Comprehensive specification mining report
 - /home/cads/restphp/.agents/teamwork_preview_spec_miner_survey_1/progress.md — Liveness and progress tracking
+- /home/cads/restphp/.agents/teamwork_preview_spec_miner_survey_1/DISPATCH.md — Task assignment log
 
 ## Loaded Skills
 - None specified
