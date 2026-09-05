@@ -28,7 +28,8 @@ The development of **RestPHP** follows a strict multi-phase architecture bluepri
   - State reset verified across 60/60 E2E tests (100% pass rate).
   - Released `restphp/octane` Composer package for 1st-class Laravel integration.
 
-- [ ] **Milestone 5: Benchmarking Suite & TechEmpower**
+- [x] **Milestone 5: Benchmarking Suite & TechEmpower**
   - Automated comparative benchmarks vs FrankenPHP and Swoole.
-  - Hot code reload via `notify` crate.
+  - Hot code reload via `notify` crate (`--watch`).
   - Official TechEmpower Framework Benchmarks submission.
+  - Interactive BenchmarkChart and documentation deployed to GitHub Pages.
