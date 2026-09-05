@@ -19,3 +19,6 @@ scratch/
 docs/node_modules/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+# Distribution releases
+dist/

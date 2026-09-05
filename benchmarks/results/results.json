@@ -1,0 +1,5 @@
+{
+  "hello_plaintext": { "req_sec": "42223.05", "latency": "2.37ms" },
+  "json_api": { "req_sec": "33728.15", "latency": "5.52ms" },
+  "heavy_compute": { "req_sec": "3760.75", "latency": "11.02ms" }
+}
