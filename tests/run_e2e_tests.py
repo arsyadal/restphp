@@ -103,7 +103,13 @@ def raw_http_request(host, port, method, path, headers=None, body=None, timeout=
     conn.close()
     return status, resp_headers, resp_body
 
+def safe_get(container, key, default=None):
+    if isinstance(container, dict):
+        return container.get(key, default)
+    return default
+
 class TestResult:
+
     def __init__(self, test_id, tier, name, passed, message="", duration=0.0, is_bug=False):
         self.test_id = test_id
         self.tier = tier
@@ -630,12 +636,12 @@ class E2ETestRunner:
             )
             try:
                 data = json.loads(bd.decode("utf-8"))
-                g = data.get("get", {})
-                p = data.get("post", {})
-                c = data.get("cookie", {})
-                q_ok = (g.get("filter") == "active" and g.get("sort") == "desc")
-                p_ok = (p.get("form_key") == "hello_post" and p.get("amount") == "99")
-                c_ok = (c.get("uid") == "user_77")
+                g = safe_get(data, "get", {})
+                p = safe_get(data, "post", {})
+                c = safe_get(data, "cookie", {})
+                q_ok = (safe_get(g, "filter") == "active" and safe_get(g, "sort") == "desc")
+                p_ok = (safe_get(p, "form_key") == "hello_post" and safe_get(p, "amount") == "99")
+                c_ok = (safe_get(c, "uid") == "user_77")
                 passed = (st == 200 and q_ok and p_ok and c_ok)
                 self.record("T3.1", 3, "Query params + Form POST + Cookie header simultaneously populated", passed, f"GET:{g}, POST:{p}, COOKIE:{c}", time.time() - t0, is_bug=not passed)
             except Exception as e:
@@ -654,12 +660,12 @@ class E2ETestRunner:
             )
             try:
                 data = json.loads(bd.decode("utf-8"))
-                g = data.get("get", {})
+                g = safe_get(data, "get", {})
                 raw_in = data.get("raw_input", "")
-                c = data.get("cookie", {})
-                q_ok = (g.get("action") == "sync" and g.get("v") == "2")
+                c = safe_get(data, "cookie", {})
+                q_ok = (safe_get(g, "action") == "sync" and safe_get(g, "v") == "2")
                 in_ok = (raw_in == json_body)
-                c_ok = (c.get("session") == "sess_combo")
+                c_ok = (safe_get(c, "session") == "sess_combo")
                 passed = (st == 200 and q_ok and in_ok and c_ok)
                 self.record("T3.2", 3, "Query params + JSON body stream + Cookie simultaneously accessible", passed, f"GET:{g}, Input matches:{in_ok}, COOKIE:{c}", time.time() - t0, is_bug=not passed)
             except Exception as e:
@@ -679,14 +685,16 @@ class E2ETestRunner:
             )
             try:
                 data = json.loads(bd.decode("utf-8"))
-                g = data.get("get", {})
-                len_ok = (data.get("raw_input_len") == len(large_32k))
-                md5_ok = (data.get("raw_input_md5") == large_md5)
-                q_ok = (g.get("checksum") == "md5")
+                g = safe_get(data, "get", {})
+                raw_len = data.get("raw_input_len", 0)
+                raw_md5 = data.get("raw_input_md5", "")
+                len_ok = (raw_len == len(large_32k))
+                md5_ok = (raw_md5 == large_md5)
+                q_ok = (safe_get(g, "checksum") == "md5")
                 passed = (st == 200 and len_ok and md5_ok and q_ok)
-                self.record("T3.3", 3, "32KB payload + Query params + Custom headers integrated smoothly", passed, f"len_ok:{len_ok}, md5_ok:{md5_ok}, q_ok:{q_ok}", time.time() - t0)
+                self.record("T3.3", 3, "32KB payload + Query params + Custom headers integrated smoothly", passed, f"len_ok:{len_ok}, md5_ok:{md5_ok}, q_ok:{q_ok}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T3.3", 3, "32KB payload + Query params + Custom headers integrated smoothly", False, str(e), time.time() - t0)
+                self.record("T3.3", 3, "32KB payload + Query params + Custom headers integrated smoothly", False, str(e), time.time() - t0, is_bug=True)
 
         # Test 3.4: Dynamic Status Code 201 + Custom response header + JSON body
         with ServerProcess(entrypoint="tests/fixtures/status_and_headers.php") as s:
@@ -710,12 +718,13 @@ class E2ETestRunner:
             )
             try:
                 data = json.loads(bd.decode("utf-8"))
-                q_tag = data.get("query", {}).get("tag")
-                p_msg = data.get("post", {}).get("message")
+                q_tag = safe_get(safe_get(data, "query", {}), "tag")
+                p_msg = safe_get(safe_get(data, "post", {}), "message")
                 passed = (st == 200 and q_tag == "こんにちは" and p_msg == "Bonjour le monde, café & thé")
-                self.record("T3.5", 3, "UTF-8 multilingual data preserved across Query and POST body", passed, f"Got: {data}", time.time() - t0)
+                self.record("T3.5", 3, "UTF-8 multilingual data preserved across Query and POST body", passed, f"Got: {data}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T3.5", 3, "UTF-8 multilingual data preserved across Query and POST body", False, str(e), time.time() - t0)
+                self.record("T3.5", 3, "UTF-8 multilingual data preserved across Query and POST body", False, str(e), time.time() - t0, is_bug=True)
+
 
         # Test 3.6: Rapid alternating payload types (JSON -> empty GET -> Form -> Binary)
         with ServerProcess(entrypoint="tests/fixtures/info.php") as s:

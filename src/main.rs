@@ -88,7 +88,7 @@ echo json_encode([
             // Default action if no subcommand is given: print banner and serve
             println!("🦀🐘 RestPHP v0.1.0 — Persistent Application Server for PHP");
             println!("Run `restphp --help` for available options.\n");
-            
+
             let worker = WorkerHandle::new().map_err(|e| format!("Worker init failed: {}", e))?;
             let entrypoint = "public/index.php".to_string();
 

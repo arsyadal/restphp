@@ -37,17 +37,15 @@ impl WorkerHandle {
                         return;
                     }
                 };
-                tracing::info!("✅ [Zend Worker] PHP VM initialized and ready for persistent requests.");
+                tracing::info!(
+                    "✅ [Zend Worker] PHP VM initialized and ready for persistent requests."
+                );
 
                 while let Ok(job) = receiver.recv() {
                     let resp = match job.target {
-                        ExecutionTarget::File(ref path) => engine.execute_file(
-                            path,
-                            &job.method,
-                            &job.uri,
-                            &job.query,
-                            &job.body,
-                        ),
+                        ExecutionTarget::File(ref path) => {
+                            engine.execute_file(path, &job.method, &job.uri, &job.query, &job.body)
+                        }
                         ExecutionTarget::Code(ref code) => engine.execute_string(
                             code,
                             &job.method,

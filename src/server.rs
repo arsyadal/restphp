@@ -33,7 +33,10 @@ pub async fn run_http_server(
 
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
     println!("🦀 [RestPHP] Listening on http://{}", addr);
-    println!("🐘 [RestPHP] Serving persistent PHP entrypoint: {}", script_path);
+    println!(
+        "🐘 [RestPHP] Serving persistent PHP entrypoint: {}",
+        script_path
+    );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -70,14 +73,18 @@ async fn handle_php_request(
 
             response
                 .body(axum::body::Body::from(php_resp.body))
-                .unwrap_or_else(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to construct body").into_response())
+                .unwrap_or_else(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to construct body",
+                    )
+                        .into_response()
+                })
         }
-        Err(err) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("RestPHP Worker Error: {}", err),
-            )
-                .into_response()
-        }
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("RestPHP Worker Error: {}", err),
+        )
+            .into_response(),
     }
 }

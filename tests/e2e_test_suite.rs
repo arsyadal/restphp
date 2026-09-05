@@ -59,7 +59,13 @@ impl TestServer {
         };
 
         let child = Command::new(&final_bin)
-            .args(["serve", "--port", &port.to_string(), "--entrypoint", entrypoint])
+            .args([
+                "serve",
+                "--port",
+                &port.to_string(),
+                "--entrypoint",
+                entrypoint,
+            ])
             .spawn()?;
 
         let mut server = TestServer {
@@ -76,12 +82,17 @@ impl TestServer {
         let start = Instant::now();
         while start.elapsed() < timeout {
             if let Ok(mut stream) = TcpStream::connect(("127.0.0.1", self.port)) {
-                let _ = stream.write_all(b"HEAD / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n");
+                let _ = stream
+                    .write_all(b"HEAD / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n");
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(50));
         }
-        Err(format!("Server failed to bind to port {} within {:?}", self.port, timeout).into())
+        Err(format!(
+            "Server failed to bind to port {} within {:?}",
+            self.port, timeout
+        )
+        .into())
     }
 }
 
@@ -103,7 +114,10 @@ pub fn send_http_request(
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
 
-    let mut req = format!("{} {} HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n", method, path, port);
+    let mut req = format!(
+        "{} {} HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n",
+        method, path, port
+    );
     let mut has_content_length = false;
     let body_bytes = body.unwrap_or(&[]);
 
@@ -164,9 +178,9 @@ fn parse_http_response(raw: &[u8]) -> std::io::Result<HttpResponse> {
     let header_str = String::from_utf8_lossy(header_bytes);
 
     let mut lines = header_str.lines();
-    let status_line = lines
-        .next()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "Empty HTTP response"))?;
+    let status_line = lines.next().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "Empty HTTP response")
+    })?;
 
     let parts: Vec<&str> = status_line.split_whitespace().collect();
     if parts.len() < 2 {
@@ -204,10 +218,10 @@ fn test_harness_sanity() {
 #[test]
 fn test_tier1_ac1_startup() {
     let server = TestServer::start("public/index.php").expect("Server should start");
-    let resp = send_http_request(server.port, "GET", "/", &[], None).expect("HTTP request should succeed");
+    let resp =
+        send_http_request(server.port, "GET", "/", &[], None).expect("HTTP request should succeed");
     assert_eq!(resp.status_code, 200);
     let json = resp.json().expect("Response should be valid JSON");
     assert_eq!(json["status"], "ok");
     assert_eq!(json["engine"], "RestPHP");
 }
-

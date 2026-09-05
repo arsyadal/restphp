@@ -4,22 +4,26 @@ header("Content-Type: application/json");
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $db_file = sys_get_temp_dir() . '/restphp_crud_test_' . getmypid() . '.json';
 
-function get_db($file) {
-    if (file_exists($file)) {
-        $content = file_get_contents($file);
-        $data = json_decode($content, true);
-        if (is_array($data)) {
-            return $data;
+if (!function_exists('restphp_crud_get_db')) {
+    function restphp_crud_get_db($file) {
+        if (file_exists($file)) {
+            $content = file_get_contents($file);
+            $data = json_decode($content, true);
+            if (is_array($data)) {
+                return $data;
+            }
         }
+        return [];
     }
-    return [];
 }
 
-function save_db($file, $data) {
-    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+if (!function_exists('restphp_crud_save_db')) {
+    function restphp_crud_save_db($file, $data) {
+        file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+    }
 }
 
-$db = get_db($db_file);
+$db = restphp_crud_get_db($db_file);
 $id = $_GET['id'] ?? null;
 
 if ($method === 'GET') {
@@ -44,7 +48,7 @@ if ($method === 'GET') {
     $new_id = (string)(count($db) + 1);
     $item = array_merge(["id" => $new_id], $data);
     $db[$new_id] = $item;
-    save_db($db_file, $db);
+    restphp_crud_save_db($db_file, $db);
     http_response_code(201);
     echo json_encode(["status" => "created", "item" => $item]);
 } elseif ($method === 'PUT') {
@@ -55,7 +59,7 @@ if ($method === 'GET') {
             $data = $_POST;
         }
         $db[$id] = array_merge($db[$id], $data);
-        save_db($db_file, $db);
+        restphp_crud_save_db($db_file, $db);
         http_response_code(200);
         echo json_encode(["status" => "updated", "item" => $db[$id]]);
     } else {
@@ -66,7 +70,7 @@ if ($method === 'GET') {
     if ($id !== null && isset($db[$id])) {
         $deleted = $db[$id];
         unset($db[$id]);
-        save_db($db_file, $db);
+        restphp_crud_save_db($db_file, $db);
         http_response_code(200);
         echo json_encode(["status" => "deleted", "item" => $deleted]);
     } else {
