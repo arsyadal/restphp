@@ -13,52 +13,64 @@ hero:
       text: Get Started →
       link: /guide/getting-started
     - theme: alt
-      text: View Benchmarks 📊
+      text: View Benchmarks
       link: /benchmarks/comparison
     - theme: alt
-      text: GitHub ★
+      text: GitHub
       link: https://github.com/arsyadal/restphp
 
 features:
-  - icon: ⚡
+  - icon:
+      src: /icons/zap.svg
+      alt: Zero-Cost C-FFI
     title: Zero-Cost C-FFI
     details: Directly embeds Zend Engine via raw C-ABI (extern "C"). Eliminates ~60ns cgo stack-switching overhead present in Go-based servers.
-  - icon: 🛡️
+  - icon:
+      src: /icons/shield.svg
+      alt: Zero Host Garbage Collection
     title: Zero Host Garbage Collection
     details: Rust compile-time ownership (RAII) manages server memory. No Stop-The-World pauses; guarantees ultra-predictable p99 tail latency.
-  - icon: 🐘
+  - icon:
+      src: /icons/cpu.svg
+      alt: Persistent Worker Architecture
     title: Persistent Worker Architecture
     details: Dedicated OS threads host isolated Zend VM instances. Boots your app once into RAM; zero file-reloading overhead on incoming requests.
-  - icon: 🚀
+  - icon:
+      src: /icons/rocket.svg
+      alt: 1st-Class Laravel Octane Driver
     title: 1st-Class Laravel Octane Driver
     details: Official adapter package (restphp/octane). Supercharge existing Laravel applications up to 10x throughput with zero code changes.
-  - icon: 📦
+  - icon:
+      src: /icons/box.svg
+      alt: Single Standalone Binary
     title: Single Standalone Binary
     details: Shipped as a single static executable (restphp). No Nginx, PHP-FPM, or Caddy configuration required.
-  - icon: 🔌
+  - icon:
+      src: /icons/plug.svg
+      alt: 100% PHP Extension Compatible
     title: 100% PHP Extension Compatible
     details: Works seamlessly with all native PHP extensions (PDO, MySQL, Redis, OPcache, cURL) without dangerous coroutine monkey-patching.
 ---
 
 <div class="benchmark-hero-container">
 
-## ⚡ The Fastest PHP Runtime on Earth
+## The Fastest PHP Runtime on Earth
 
 Measured head-to-head under high-concurrency loads on modern 64-core Linux servers.
 
 | Runtime Engine | Architecture | Host GC | Latency p99 | Peak RAM (10k req) | Throughput (RPS) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 🦀 **RestPHP** | **Rust + Zend C-FFI** | **Zero GC (RAII)** | **1.2 ms** (Rock solid) | **~12 MB** | **🔥 52,400+ req/s** |
-| 🦫 FrankenPHP | Go (Caddy) + cgo | Go GC (STW pauses) | 4.8 ms (Jittery) | ~68 MB | 38,100 req/s |
-| 🏃 RoadRunner | Go + Goridge IPC | Go GC (STW pauses) | 5.6 ms (IPC cost) | ~58 MB | 34,200 req/s |
-| 🌀 Swoole | C++ Extension | Manual (High crash risk)| 1.9 ms (Fast) | ~35 MB | 46,800 req/s |
-| 🐘 Nginx + PHP-FPM | FastCGI (Cold Boot) | None (Process teardown)| 42.0 ms (Slow) | ~140 MB | 4,200 req/s |
+| **RestPHP** | **Rust + Zend C-FFI** | **Zero GC (RAII)** | **1.2 ms** (Deterministic) | **~12 MB** | **52,400+ req/s** |
+| FrankenPHP | Go (Caddy) + cgo | Go GC (STW pauses) | 4.8 ms (Jittery) | ~68 MB | 38,100 req/s |
+| RoadRunner | Go + Goridge IPC | Go GC (STW pauses) | 5.6 ms (IPC cost) | ~58 MB | 34,200 req/s |
+| Swoole | C++ Extension | Manual (Crash risks) | 1.9 ms (Fast) | ~35 MB | 46,800 req/s |
+| Nginx + PHP-FPM | FastCGI (Cold Boot) | None (Process teardown)| 42.0 ms (Slow) | ~140 MB | 4,200 req/s |
 
 </div>
 
 ---
 
-## 🚀 One Minute with RestPHP
+## One Minute with RestPHP
 
 Install, build, and serve any PHP application in seconds:
 
@@ -86,7 +98,7 @@ restphp eval 'echo "PHP Version: " . PHP_VERSION . "\n";'
 
 ---
 
-## 🎯 Architectural Comparison
+## Architectural Comparison
 
 Why does RestPHP outperform Go and C++ alternatives?
 
