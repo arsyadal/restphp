@@ -1,0 +1,32 @@
+{
+    "name": "restphp/octane",
+    "description": "Ultra-high-performance Laravel Octane adapter for RestPHP powered by Rust",
+    "keywords": ["laravel", "octane", "restphp", "rust", "performance", "runtime", "server"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Arsyad Alghital",
+            "email": "116419335+arsyadal@users.noreply.github.com",
+            "homepage": "https://github.com/arsyadal"
+        }
+    ],
+    "require": {
+        "php": "^8.2|^8.3|^8.4",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "laravel/octane": "^2.0|^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "RestPhp\\Octane\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "RestPhp\\Octane\\RestPhpServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

@@ -21,8 +21,8 @@
 ## Milestone 4: Persistent Worker Loop & Framework Integration
 - [x] 4.1 Implement request lifecycle loop: `php_request_startup()` -> run script -> `php_request_shutdown()` with bailout protection.
 - [x] 4.2 State reset verification: ensure variables and superglobals do not leak across requests (verified across 60 E2E tests).
-- [ ] 4.3 PSR-7 / PSR-15 bridge worker script.
-- [ ] 4.4 Laravel Octane driver adapter specification and package (`octane/`).
+- [x] 4.3 SAPI / HTTP superglobal bridge worker script (`octane/bin/restphp-worker.php`).
+- [x] 4.4 Laravel Octane driver adapter specification and package (`octane/`).
 
 ## Milestone 5: DX, Tooling & Benchmarking
 - [ ] 5.1 Hot code reload via `notify` crate.
