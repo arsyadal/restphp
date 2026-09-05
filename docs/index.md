@@ -52,6 +52,8 @@ features:
     details: Works seamlessly with all native PHP extensions (PDO, MySQL, Redis, OPcache, cURL) without dangerous coroutine monkey-patching.
 ---
 
+<HeroTerminal />
+
 <div class="benchmark-hero-container">
 
 ## The Fastest PHP Runtime on Earth
