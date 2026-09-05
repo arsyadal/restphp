@@ -2,6 +2,8 @@
 
 **RestPHP** is a modern, ultra-high-performance persistent application server and runtime for PHP, written in Rust.
 
+**Important Positioning:** RestPHP is a **100% standalone sovereign runtime**. It is not dependent on Laravel Octane. While it provides an optional first-class adapter for Laravel Octane to supercharge Laravel applications, RestPHP can run any plain PHP script or custom framework directly.
+
 ---
 
 ## The Problem with Traditional PHP Hosting
