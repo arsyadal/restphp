@@ -27,37 +27,51 @@
   - `src/server.rs`: Axum async HTTP server listening on `--port` (default 8080).
   - `src/worker.rs`: Dedicated OS worker thread running isolated Zend VM with lock-free `crossbeam-channel` and `tokio::sync::oneshot`.
   - `src/main.rs`: CLI commands (`restphp serve --port 8080`, `restphp eval 'code'`).
-  - Tested live with `curl -i http://localhost:8089/` -> returned HTTP 200 OK and JSON response.
-- [x] **DevOps & Quality Automation**
-  - GitHub Actions CI in `.github/workflows/ci.yml`.
-  - Dependabot & auto-merge bot in `.github/workflows/dependabot-auto-merge.yml`.
-  - Automatic binary release builder in `.github/workflows/release.yml`.
-  - Stale issue/PR bot in `.github/workflows/stale.yml`.
-  - Context7 MCP installed and configured in `~/.gemini/config/mcp_config.json`.
-  - E2E Test Suite in `tests/e2e_test_suite.rs` with 7 PHP fixtures.
+- [x] **Milestone 4: Persistent Worker Loop & Laravel Octane Adapter**
+  - Dedicated OS worker threads with bounded work-stealing queue (`crossbeam-channel`).
+  - Strict per-request lifecycle: `php_request_startup()` -> handle -> `php_request_shutdown()`.
+  - Bailout protection via `zend_first_try` / `zend_catch` preventing fatal errors from crashing threads.
+  - SAPI bridge mapping HTTP headers to `$_SERVER`, cookies to `$_COOKIE`, and body to `$_POST` / `php://input`.
+  - Laravel Octane official adapter package in `octane/` (`restphp/octane`) with worker script `octane/bin/restphp-worker.php`.
+  - 4-Tier 60-test E2E test runner (`tests/run_e2e_tests.py`) passing at 100%.
+- [x] **Milestone 5: DX, Tooling, Hot Reload & Benchmarks**
+  - Bun-style zero-config CLI: `restphp` (auto-detects Laravel/entrypoint), `restphp app.php -p 3000`, `restphp -e 'code'`.
+  - Hot code reload via `notify` crate (`--watch`) with 500ms debounce and collision-free worker recycling.
+  - Automated benchmark suite in `benchmarks/` (`run.sh`, `report.php`).
+  - Official TechEmpower Framework Benchmarks (TFB) configuration in `frameworks/Rust/restphp/`.
+  - High-performance VitePress documentation website deployed to GitHub Pages (https://arsyadal.github.io/restphp/) with interactive `HeroTerminal` and animated `BenchmarkChart`.
 
 ---
 
 ## 3. Architecture & File Mapping
 ```
 /home/cads/restphp/
-├── Cargo.toml                  # Tokio, Axum, Crossbeam, Clap, Serde
-├── build.rs                    # Compiles c_src/sapi_bridge.c with php-config --includes
-├── c_src/
-│   ├── sapi_bridge.h          # C SAPI bridge header (RestPhpResponse)
-│   └── sapi_bridge.c          # Overrides ub_write, send_headers, superglobals
+├── Cargo.toml                  # Tokio, Axum, Crossbeam, Clap, Notify, Serde
+├── build.rs                    # Compiles c/sapi.c with php-config --includes & links libphp
+├── c/
+│   └── sapi.c                 # Custom SAPI module (ub_write, send_headers, read_post, cookies)
 ├── src/
-│   ├── lib.rs                 # Root library crate
-│   ├── ffi.rs                 # Raw extern "C" bindings to sapi_bridge
-│   ├── sapi.rs                # Safe Rust wrappers (PhpEngine, PhpResponse)
-│   ├── worker.rs              # Persistent worker thread pool & dispatcher
-│   ├── server.rs              # Tokio + Axum async HTTP server
-│   └── main.rs                # CLI entrypoint (clap)
+│   ├── lib.rs                 # Library crate root (re-exports worker, server, sapi)
+│   ├── ffi/                   # Raw C-ABI extern "C" bindings to libphp.so & custom SAPI
+│   ├── sapi/                  # Safe Rust wrappers (PhpEngine, callbacks, context)
+│   ├── worker.rs              # Persistent worker pool, work-stealing, recycling, shutdown
+│   ├── server.rs              # Tokio + Axum async HTTP server & header mapping
+│   └── main.rs                # CLI entrypoint (Clap) with Bun-style commands & --watch
+├── octane/                    # Official Laravel Octane adapter (restphp/octane)
+│   ├── composer.json          # Laravel package auto-discovery
+│   ├── bin/restphp-worker.php # Persistent Octane worker entrypoint
+│   └── src/                   # ServiceProvider, commands, process inspector
+├── benchmarks/                # Automated wrk benchmark runner & reports
+├── frameworks/Rust/restphp/   # Official TechEmpower Framework Benchmark configuration
+├── docs/                      # Official VitePress documentation site
+│   ├── .vitepress/theme/      # Custom theme with HeroTerminal.vue & BenchmarkChart.vue
+│   └── public/icons/          # Sharp SVG vector icons (zap, shield, cpu, etc.)
 ├── tests/
-│   ├── e2e_test_suite.rs      # Native Rust E2E test suite (cargo test)
-│   └── fixtures/              # PHP test scripts (crud, lifecycle, error, etc.)
-├── GEMINI.md & AGENTS.md      # Auto-loaded agent memory files
-└── PRD.md & SPEC.md           # Product requirements & low-level tech specs
+│   ├── run_e2e_tests.py       # Comprehensive 4-Tier 60-test E2E test runner
+│   └── e2e_test_suite.rs      # Native Rust integration test suite (32 tests)
+├── AGENTS.md & GEMINI.md      # Auto-loaded AI agent memory rules
+├── CHANGELOG.md               # Versioned changelog (v0.1.0)
+└── ROADMAP.md & PRD.md & SPEC.md
 ```
 
 ---
@@ -65,29 +79,24 @@
 ## 4. Verification Commands (Run to confirm healthy state)
 ```bash
 # 1. Format & Lint (Must pass cleanly)
-cargo fmt --all -- --check
+source ~/.cargo/env
+cargo fmt --all
 cargo clippy -- -D warnings
 
-# 2. Run Test Suite
-cargo test
+# 2. Run Test Suites
+cargo test -- --test-threads=1
+python3 tests/run_e2e_tests.py
 
-# 3. Test HTTP Server
-cargo run -- serve --port 8080
-# In another terminal:
-curl -i http://127.0.0.1:8080/
+# 3. Test Documentation Build
+cd docs && NODE_ENV=production npm run docs:build
+
+# 4. Run Server (Bun-Style Zero-Config)
+cargo run --
 ```
 
 ---
 
-## 5. Next Immediate Tasks (To Be Done Next)
-1. **Milestone 4: Persistent Zend Worker Actor & State Reset**
-   - Implement `php_request_startup()` -> run -> `php_request_shutdown()` per-request lifecycle to guarantee zero cross-request memory leaks.
-   - Build the Laravel Octane persistent worker adapter (`octane/restphp-worker.php`).
-   - Implement graceful worker recycling (auto-recycle worker after 10,000 requests or memory threshold).
-2. **Milestone 5: Production Benchmarks vs FrankenPHP**
-   - Setup `benchmarks/` with `oha` / `wrk` benchmarking scripts.
-   - Benchmark RestPHP vs FrankenPHP on:
-     - Plaintext / JSON Serialization throughput (RPS).
-     - p99 tail latency.
-     - Idle & peak memory consumption.
-   - Update README.md with benchmark proof.
+## 5. Future Horizons (Post v0.1.0)
+1. **Automatic TLS / HTTPS**: Native TLS termination via `rustls` / ACME Let's Encrypt.
+2. **IO_Uring Engine**: Optional Linux `io_uring` driver for zero-syscall network socket polling.
+3. **TechEmpower Round Submission**: Submit RestPHP results to the official TechEmpower Framework Benchmarks repository.

@@ -25,6 +25,8 @@
 - [x] 4.4 Laravel Octane driver adapter specification and package (`octane/`).
 
 ## Milestone 5: DX, Tooling & Benchmarking
-- [ ] 5.1 Hot code reload via `notify` crate.
+- [x] 5.1 Hot code reload via `notify` crate (`--watch`).
 - [ ] 5.2 Automatic TLS termination via `rustls`.
-- [ ] 5.3 Micro-benchmark suite comparing against FrankenPHP, Swoole, and Nginx+FPM.
+- [x] 5.3 Micro-benchmark suite comparing against FrankenPHP, Swoole, and Nginx+FPM (`benchmarks/`).
+- [x] 5.4 Official TechEmpower Framework Benchmarks (TFB) configuration files (`frameworks/Rust/restphp/`).
+- [x] 5.5 Official VitePress Documentation Website with interactive HeroTerminal & BenchmarkChart (`docs/`).
