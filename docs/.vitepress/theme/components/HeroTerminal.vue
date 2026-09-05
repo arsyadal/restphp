@@ -61,22 +61,22 @@ const tabs = [
   },
   {
     id: 'serve',
-    name: '2. Zero-Config Serve',
-    command: 'restphp',
-    outputHtml: `<span class="brand">🦀 RestPHP v0.1.0</span> <span class="muted">(persistent Zend worker pool)</span><br/><br/>
+    name: '2. Run Any Script',
+    command: 'restphp app.php',
+    outputHtml: `<span class="brand">RestPHP v0.1.0</span> <span class="muted">(standalone async server)</span><br/><br/>
   <span class="dim">➜</span>  <span class="label">Local:</span>   <span class="highlight">http://localhost:8080/</span><br/>
-  <span class="dim">➜</span>  <span class="label">Network:</span> <span class="highlight">http://0.0.0.0:8080/</span><br/>
-  <span class="dim">➜</span>  <span class="label">Serving:</span> <span class="success">public/index.php</span><br/><br/>
+  <span class="dim">➜</span>  <span class="label">Serving:</span> <span class="success">app.php</span><br/><br/>
 <span class="dim">Ready in 1.4ms (p99 tail latency: 1.2ms)</span>`
   },
   {
     id: 'laravel',
-    name: '3. Laravel Octane',
-    command: 'composer require restphp/octane && php artisan octane:restphp',
-    outputHtml: `<span class="dim">✨</span> <span class="highlight">Detected Laravel 11.x Application</span><br/>
-<span class="success">✓</span> Loaded framework into persistent RAM cache<br/>
-<span class="dim">➜</span>  <span class="label">Octane:</span>  <span class="highlight">http://localhost:8000/</span><br/>
-<span class="dim">➜</span>  <span class="label">Throughput:</span> <span class="success">48,200+ req/s</span> <span class="muted">(0ns cgo overhead)</span>`
+    name: '3. Run Laravel',
+    command: 'restphp',
+    outputHtml: `<span class="dim">✨</span> <span class="highlight">Detected Laravel application (artisan found)</span><br/>
+<span class="success">✓</span> Running directly on RestPHP Standalone Engine<br/>
+  <span class="dim">➜</span>  <span class="label">Local:</span>   <span class="highlight">http://localhost:8000/</span><br/>
+  <span class="dim">➜</span>  <span class="label">Serving:</span> <span class="success">public/index.php</span> <span class="muted">(Persistent Worker)</span><br/><br/>
+<span class="brand">🔥 52,400+ req/s</span> <span class="dim">· Zero Host GC · Zero configuration</span>`
   },
   {
     id: 'eval',
