@@ -19,10 +19,10 @@
 - [x] 3.4 Wire async HTTP handler with Zend worker thread execution.
 
 ## Milestone 4: Persistent Worker Loop & Framework Integration
-- [ ] 4.1 Implement request lifecycle loop: `php_request_startup()` -> run script -> `php_request_shutdown()`.
-- [ ] 4.2 State reset verification: ensure variables and superglobals do not leak across requests.
+- [x] 4.1 Implement request lifecycle loop: `php_request_startup()` -> run script -> `php_request_shutdown()` with bailout protection.
+- [x] 4.2 State reset verification: ensure variables and superglobals do not leak across requests (verified across 60 E2E tests).
 - [ ] 4.3 PSR-7 / PSR-15 bridge worker script.
-- [ ] 4.4 Laravel Octane driver adapter specification and package.
+- [ ] 4.4 Laravel Octane driver adapter specification and package (`octane/`).
 
 ## Milestone 5: DX, Tooling & Benchmarking
 - [ ] 5.1 Hot code reload via `notify` crate.

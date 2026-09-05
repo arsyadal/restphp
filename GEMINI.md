@@ -38,7 +38,8 @@ It serves as the single source of truth for architecture, decisions, rules, and 
 - [x] **Milestone 1**: Zend Engine C-FFI Core Embedding (Verified in memory).
 - [x] **Milestone 2**: Custom SAPI Implementation (`ub_write`, `send_headers`, superglobals).
 - [x] **Milestone 3**: Async Tokio HTTP Server & REST routing (Verified with live `curl`).
-- [ ] **Milestone 4**: Persistent Zend Worker Actor, State Reset & Laravel Octane Adapter (`octane/`).
+- [x] **Milestone 4 (Core)**: Persistent Zend Worker Actor, State Reset & 60/60 E2E test pass.
+- [ ] **Milestone 4 (Integration)**: Laravel Octane Adapter (`octane/`).
 - [ ] **Milestone 5**: Micro-benchmarks vs FrankenPHP & TechEmpower submissions.
 
 ---
