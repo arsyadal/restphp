@@ -1,9 +1,9 @@
 <template>
   <div class="scenarios-section">
     <div class="section-heading">
-      <h2 class="heading-title">Measured Across 6 Real-World Situations</h2>
+      <h2 class="heading-title">The fastest server in every situation you actually hit.</h2>
       <p class="heading-desc">
-        Every metric tested directly with <code>wrk</code> on modern Linux x64 servers. Real empirical data — zero marketing inflation.
+        Cold boot, warm cache, peak concurrency, tail latency — measured six ways against FrankenPHP, RoadRunner, Swoole, and Nginx+FPM at their defaults.
       </p>
     </div>
 

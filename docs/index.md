@@ -15,38 +15,6 @@ hero:
     - theme: alt
       text: GitHub
       link: https://github.com/arsyadal/restphp
-
-features:
-  - icon:
-      src: /icons/zap.svg
-      alt: Zero-Cost C-FFI
-    title: Zero-Cost C-FFI
-    details: Directly embeds Zend Engine via raw C-ABI (extern "C"). Eliminates ~60ns cgo stack-switching overhead present in Go-based servers.
-  - icon:
-      src: /icons/shield.svg
-      alt: Zero Host Garbage Collection
-    title: Zero Host Garbage Collection
-    details: Rust compile-time ownership (RAII) manages server memory. No Stop-The-World pauses; guarantees ultra-predictable p99 tail latency.
-  - icon:
-      src: /icons/cpu.svg
-      alt: Persistent Worker Architecture
-    title: Persistent Worker Architecture
-    details: Dedicated OS threads host isolated Zend VM instances. Boots your app once into RAM; zero file-reloading overhead on incoming requests.
-  - icon:
-      src: /icons/rocket.svg
-      alt: 1st-Class Laravel Octane Driver
-    title: 1st-Class Laravel Octane Driver
-    details: Official adapter package (restphp/octane). Supercharge existing Laravel applications up to 10x throughput with zero code changes.
-  - icon:
-      src: /icons/box.svg
-      alt: Single Standalone Binary
-    title: Single Standalone Binary
-    details: Shipped as a single static executable (restphp). No Nginx, PHP-FPM, or Caddy configuration required.
-  - icon:
-      src: /icons/plug.svg
-      alt: 100% PHP Extension Compatible
-    title: 100% PHP Extension Compatible
-    details: Works seamlessly with all native PHP extensions (PDO, MySQL, Redis, OPcache, cURL) without dangerous coroutine monkey-patching.
 ---
 
 <HeroTerminal />
@@ -54,6 +22,43 @@ features:
 <BenchmarkChart />
 
 <ScenarioCards />
+
+---
+
+## Core Pillars & Capabilities
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon"><img src="/icons/zap.svg" alt="Zero-Cost C-FFI" /></div>
+    <h3 class="feature-title">Zero-Cost C-FFI</h3>
+    <p class="feature-desc">Directly embeds Zend Engine via raw C-ABI (<code>extern "C"</code>). Eliminates ~60ns cgo stack-switching overhead present in Go-based servers.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon"><img src="/icons/shield.svg" alt="Zero Host Garbage Collection" /></div>
+    <h3 class="feature-title">Zero Host Garbage Collection</h3>
+    <p class="feature-desc">Rust compile-time ownership (RAII) manages server memory. No Stop-The-World pauses; guarantees ultra-predictable p99 tail latency.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon"><img src="/icons/cpu.svg" alt="Persistent Worker Architecture" /></div>
+    <h3 class="feature-title">Persistent Worker Architecture</h3>
+    <p class="feature-desc">Dedicated OS threads host isolated Zend VM instances. Boots your app once into RAM; zero file-reloading overhead on incoming requests.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon"><img src="/icons/rocket.svg" alt="1st-Class Laravel Octane Driver" /></div>
+    <h3 class="feature-title">1st-Class Laravel Octane Driver</h3>
+    <p class="feature-desc">Official adapter package (<code>restphp/octane</code>). Supercharge existing Laravel applications up to 10x throughput with zero code changes.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon"><img src="/icons/box.svg" alt="Single Standalone Binary" /></div>
+    <h3 class="feature-title">Single Standalone Binary</h3>
+    <p class="feature-desc">Shipped as a single static executable (<code>restphp</code>). No Nginx, PHP-FPM, or Caddy configuration required.</p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon"><img src="/icons/plug.svg" alt="100% PHP Extension Compatible" /></div>
+    <h3 class="feature-title">100% PHP Extension Compatible</h3>
+    <p class="feature-desc">Works seamlessly with all native PHP extensions (PDO, MySQL, Redis, OPcache, cURL) without dangerous coroutine monkey-patching.</p>
+  </div>
+</div>
 
 ---
 
@@ -200,5 +205,56 @@ Join the revolution. Say goodbye to slow cold boots and unpredictable GC pauses.
 .btn-secondary:hover {
   border-color: #f97316;
   transform: translateY(-1px);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  width: 44px;
+  height: 44px;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.feature-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+.feature-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--vp-c-text-1);
+}
+
+.feature-desc {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--vp-c-text-2);
+  margin: 0;
 }
 </style>
