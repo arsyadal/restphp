@@ -1,0 +1,12 @@
+# GitHub Linguist Overrides
+# Ensure RestPHP is accurately recognized as a Rust & PHP project
+
+# Exclude python test scripts and internal runners from language statistics
+*.py linguist-detectable=false
+*.py linguist-vendored=true
+tests/** linguist-documentation=true
+
+# Ensure Rust and C and PHP are prioritized
+*.rs linguist-detectable=true
+*.php linguist-detectable=true
+c_src/** linguist-detectable=true
