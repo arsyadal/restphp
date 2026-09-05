@@ -30,56 +30,62 @@ export default defineConfig({
         ]
       }
     ],
-    sidebar: {
-      '/guide/': [
-        {
-          text: 'Introduction',
-          items: [
-            { text: 'What is RestPHP?', link: '/guide/what-is-restphp' },
-            { text: 'Getting Started', link: '/guide/getting-started' },
-            { text: 'CLI Usage', link: '/guide/cli-commands' },
-          ]
-        },
-        {
-          text: 'Core Features',
-          items: [
-            { text: 'Zero Host GC', link: '/guide/zero-host-gc' },
-            { text: 'Persistent Worker Model', link: '/guide/persistent-worker' },
-            { text: 'Superglobal Mapping', link: '/guide/superglobals' },
-          ]
-        }
-      ],
-      '/architecture/': [
-        {
-          text: 'Architecture Deep-Dive',
-          items: [
-            { text: 'Architectural Blueprint', link: '/architecture/overview' },
-            { text: 'Zend Engine C-FFI', link: '/architecture/zend-ffi' },
-            { text: 'Custom SAPI Bridge', link: '/architecture/custom-sapi' },
-            { text: 'Async Tokio Engine', link: '/architecture/async-engine' },
-          ]
-        }
-      ],
-      '/frameworks/': [
-        {
-          text: 'Framework Integrations',
-          items: [
-            { text: 'Laravel & Octane', link: '/frameworks/laravel-octane' },
-            { text: 'Traditional PHP & Slim', link: '/frameworks/traditional-php' },
-            { text: 'Symfony Runtime', link: '/frameworks/symfony' },
-          ]
-        }
-      ],
-      '/benchmarks/': [
-        {
-          text: 'Performance Benchmarks',
-          items: [
-            { text: 'RestPHP vs FrankenPHP', link: '/benchmarks/comparison' },
-            { text: 'Benchmark Methodology', link: '/benchmarks/methodology' },
-          ]
-        }
-      ]
-    },
+    sidebar: [
+      {
+        text: 'Get Started',
+        items: [
+          { text: 'Welcome to RestPHP', link: '/guide/what-is-restphp' },
+          { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'CLI Reference', link: '/guide/cli-commands' },
+        ]
+      },
+      {
+        text: 'Core Runtime',
+        items: [
+          { text: 'Persistent Worker Architecture', link: '/runtime/persistent-workers' },
+          { text: 'Zero Host GC & Determinism', link: '/runtime/zero-host-gc' },
+          { text: 'Request Lifecycle & State Reset', link: '/runtime/state-reset' },
+        ]
+      },
+      {
+        text: 'HTTP & SAPI Subsystem',
+        items: [
+          { text: 'Superglobal Mapping', link: '/http/superglobals' },
+          { text: 'Output Buffering & Headers', link: '/http/output-buffering' },
+        ]
+      },
+      {
+        text: 'Framework Integrations',
+        items: [
+          { text: 'Laravel & Laravel Octane', link: '/frameworks/laravel-octane' },
+          { text: 'Traditional PHP & Slim', link: '/frameworks/traditional-php' },
+          { text: 'Symfony Framework', link: '/frameworks/symfony' },
+        ]
+      },
+      {
+        text: 'Architecture Deep Dive',
+        items: [
+          { text: 'Architectural Blueprint', link: '/architecture/overview' },
+          { text: 'Zend Engine C-FFI', link: '/architecture/zend-ffi' },
+          { text: 'Custom SAPI Bridge (c/sapi.c)', link: '/architecture/custom-sapi' },
+          { text: 'Async Tokio Engine', link: '/architecture/async-engine' },
+        ]
+      },
+      {
+        text: 'Performance & Benchmarks',
+        items: [
+          { text: 'RestPHP vs Competitors', link: '/benchmarks/comparison' },
+          { text: 'Benchmark Methodology', link: '/benchmarks/methodology' },
+        ]
+      },
+      {
+        text: 'Project & Community',
+        items: [
+          { text: 'Roadmap & Milestones', link: '/roadmap' },
+          { text: 'GitHub Repository', link: 'https://github.com/arsyadal/restphp' },
+        ]
+      }
+    ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/arsyadal/restphp' }
     ],
