@@ -53,6 +53,8 @@ features:
 
 <BenchmarkChart />
 
+<ScenarioCards />
+
 ---
 
 ## One Minute with RestPHP

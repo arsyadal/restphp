@@ -25,6 +25,10 @@ RestPHP is engineered to deliver maximum throughput, minimal memory usage, and r
 
 ---
 
+<ScenarioCards />
+
+---
+
 ## 🔬 Deep-Dive: Why RestPHP Wins
 
 ### 1. Eliminating the CGO Tax (~60ns per call)
