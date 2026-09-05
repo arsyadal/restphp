@@ -41,6 +41,40 @@ Traditional PHP operates on a **shared-nothing architecture**: every incoming HT
 
 ---
 
+## 📦 Installation
+
+### Option 1: One-Line Install Script (Recommended)
+
+```bash
+curl -fsSL https://restphp.dev/install.sh | bash
+```
+
+Verify your installation:
+
+```bash
+restphp --version
+# Output: restphp 0.1.0
+```
+
+### Option 2: Build from Source with Cargo
+
+Ensure you have `php-dev` and build essentials installed:
+
+```bash
+# Ubuntu / Debian
+sudo apt-get install -y build-essential libphp-embed php-dev pkg-config clang
+
+# Clone and compile
+git clone https://github.com/arsyadal/restphp.git
+cd restphp
+cargo build --release
+
+# Install binary to /usr/local/bin
+sudo cp target/release/restphp /usr/local/bin/
+```
+
+---
+
 ## 🚀 Quickstart (Bun-Style Simplicity)
 
 ### 1. Zero-Config Instant Startup

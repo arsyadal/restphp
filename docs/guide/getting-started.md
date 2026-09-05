@@ -47,54 +47,33 @@ sudo cp target/release/restphp /usr/local/bin/
 
 ---
 
-## 🚀 Quickstart: Your First Application
+## 🚀 Quickstart (Bun-Style Simplicity)
 
-### 1. Create a Project Directory
-
-```bash
-mkdir my-app && cd my-app
-mkdir public
-```
-
-### 2. Create `public/index.php`
-
-```php
-<?php
-header("Content-Type: application/json");
-
-echo json_encode([
-    "message" => "Hello from RestPHP!",
-    "engine" => "RestPHP (Rust)",
-    "php_version" => PHP_VERSION,
-    "time" => microtime(true),
-], JSON_PRETTY_PRINT);
-```
-
-### 3. Start the Server
+### 1. Zero-Config Instant Startup
 
 ```bash
-restphp -p 8080
+# Just run restphp — auto-detects Laravel, public/index.php, or index.php!
+restphp
+
+# Run any script directly on a custom port
+restphp app.php -p 3000
+
+# Evaluate inline PHP directly from terminal
+restphp -e 'echo "Hello from RestPHP!\n";'
 ```
 
-Open your browser or run:
+### 2. Laravel Octane Integration
+
+Install the official RestPHP adapter:
 
 ```bash
-curl -i http://localhost:8080/
+composer require restphp/octane
 ```
 
-You should see:
+Run persistent Laravel server:
 
-```http
-HTTP/1.1 200 OK
-content-type: application/json
-server: RestPHP/0.1.0
-
-{
-    "message": "Hello from RestPHP!",
-    "engine": "RestPHP (Rust)",
-    "php_version": "8.4.24",
-    "time": 1788588150.117025
-}
+```bash
+php artisan octane:restphp --port 8000
 ```
 
 ---

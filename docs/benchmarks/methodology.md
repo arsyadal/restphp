@@ -21,7 +21,7 @@ Tests raw routing, superglobal mapping, JSON serialization, and output buffering
 
 ```bash
 # Start RestPHP
-restphp serve -p 8080 -e public/index.php
+restphp -p 8080
 
 # Run wrk benchmark
 wrk -t12 -c1000 -d30s --latency http://127.0.0.1:8080/

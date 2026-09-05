@@ -51,7 +51,7 @@ If you do not wish to install Octane, RestPHP can serve traditional Laravel appl
 
 ```bash
 cd /path/to/laravel
-restphp serve --port 8000 --entrypoint public/index.php
+restphp -p 8000
 ```
 
 Because RestPHP implements a full custom SAPI with automatic superglobal injection, `$_SERVER`, `$_GET`, `$_POST`, `$_COOKIE`, and `php://input` are automatically populated, allowing Laravel's HTTP Kernel to handle requests seamlessly.

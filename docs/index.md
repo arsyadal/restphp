@@ -87,6 +87,34 @@ restphp -e 'echo "PHP Version: " . PHP_VERSION . "\n";'
 
 ---
 
+## Architecture Overview
+
+```mermaid
+graph TD
+    Client[HTTP Clients / Browsers] -->|TCP / HTTP/1.1 & HTTP/2| Axum[Axum / Tokio Async HTTP Engine]
+    
+    subgraph RustHost ["RestPHP Rust Core"]
+        Axum --> Router[Request Dispatcher]
+        Router --> Channel["Lock-Free Crossbeam Channel"]
+        Channel --> WorkerPool["Persistent Worker Pool"]
+    end
+    
+    subgraph WorkerThread ["Dedicated OS Worker Thread"]
+        WorkerPool --> SAPIBridge["RestPHP SAPI Bridge (c/sapi.c)"]
+        SAPIBridge --> FFI["Zero-Cost C-ABI FFI"]
+        FFI --> ZendVM["Embedded Zend VM (libphp.so)"]
+        ZendVM --> Script["User Script / Laravel Kernel"]
+        Script --> OutputBuffer["ub_write / send_headers Hook"]
+        OutputBuffer --> Response["In-Memory Response Bytes"]
+    end
+
+    Response --> Oneshot["Tokio Oneshot Channel"]
+    Oneshot --> Axum
+    Axum --> Client
+```
+
+---
+
 ## Architectural Comparison
 
 Why does RestPHP outperform Go and C++ alternatives?
