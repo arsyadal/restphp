@@ -16,6 +16,8 @@ use std::path::{Path, PathBuf};
 pub enum ExecutionTarget {
     /// Inline PHP source code evaluated in memory
     Inline(String),
+    /// Alias for Inline
+    Code(String),
     /// PHP script file on disk
     File(PathBuf),
 }
@@ -121,7 +123,7 @@ impl PhpEngine {
 
             // Execute target with bailout protection
             let exit_status = match target {
-                ExecutionTarget::Inline(ref code) => {
+                ExecutionTarget::Inline(ref code) | ExecutionTarget::Code(ref code) => {
                     let c_code = CString::new(code.as_str()).map_err(|e| e.to_string())?;
                     let c_desc = CString::new("restphp_eval").unwrap();
                     ffi::restphp_eval_string_safe(c_code.as_ptr(), c_desc.as_ptr())

@@ -22,6 +22,14 @@ enum Commands {
 
         #[arg(short, long, default_value = "public/index.php")]
         entrypoint: String,
+
+        /// Number of persistent Zend worker OS threads (default 1 for NTS PHP)
+        #[arg(short, long, default_value_t = 1)]
+        workers: usize,
+
+        /// Maximum requests per worker before recycling (0 = unlimited)
+        #[arg(short = 'm', long, default_value_t = 10000)]
+        max_requests: u64,
     },
     /// Evaluate inline PHP code directly from memory
     Eval {
@@ -39,9 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             host,
             port,
             entrypoint,
+            workers,
+            max_requests,
         }) => {
             println!("🚀 [RestPHP] Initializing async runtime & Zend Worker Pool...");
-            let worker = WorkerHandle::new().map_err(|e| format!("Worker init failed: {}", e))?;
+            let worker = WorkerHandle::new_pool(workers, max_requests)
+                .map_err(|e| format!("Worker init failed: {}", e))?;
 
             // Verify entrypoint exists
             if !std::path::Path::new(&entrypoint).exists() {
@@ -74,7 +85,8 @@ echo json_encode([
             restphp::server::run_http_server(&host, port, &entrypoint, worker).await?;
         }
         Some(Commands::Eval { code }) => {
-            let worker = WorkerHandle::new().map_err(|e| format!("Worker init failed: {}", e))?;
+            let worker = WorkerHandle::new_pool(1, 10000)
+                .map_err(|e| format!("Worker init failed: {}", e))?;
             let resp = worker
                 .dispatch(
                     ExecutionTarget::Inline(code),
@@ -94,7 +106,8 @@ echo json_encode([
             println!("🦀🐘 RestPHP v0.1.0 — Persistent Application Server for PHP");
             println!("Run `restphp --help` for available options.\n");
 
-            let worker = WorkerHandle::new().map_err(|e| format!("Worker init failed: {}", e))?;
+            let worker = WorkerHandle::new_pool(1, 10000)
+                .map_err(|e| format!("Worker init failed: {}", e))?;
             let entrypoint = "public/index.php".to_string();
 
             if !std::path::Path::new(&entrypoint).exists() {

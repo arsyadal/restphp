@@ -13,3 +13,4 @@ Cargo.lock
 # Logs & temp
 *.log
 scratch/
+.agents/

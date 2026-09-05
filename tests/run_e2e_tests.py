@@ -311,11 +311,11 @@ class E2ETestRunner:
                                          body=body_form)
             try:
                 data = json.loads(bd.decode("utf-8"))
-                post_data = data.get("post", {})
-                passed = (post_data.get("name") == "John Doe" and post_data.get("email") == "john@example.com" and post_data.get("age") == "30")
-                self.record("T1.3.3", 1, "Form data parsed into $_POST for urlencoded body", passed, f"Got $_POST: {post_data}", time.time() - t0)
+                post_data = safe_get(data, "post", {})
+                passed = (safe_get(post_data, "name") == "John Doe" and safe_get(post_data, "email") == "john@example.com" and safe_get(post_data, "age") == "30")
+                self.record("T1.3.3", 1, "Form data parsed into $_POST for urlencoded body", passed, f"Got $_POST: {post_data}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T1.3.3", 1, "Form data parsed into $_POST for urlencoded body", False, str(e), time.time() - t0)
+                self.record("T1.3.3", 1, "Form data parsed into $_POST for urlencoded body", False, str(e), time.time() - t0, is_bug=True)
 
             # Test 1.3.4: php://input raw JSON stream
             t0 = time.time()
@@ -327,17 +327,17 @@ class E2ETestRunner:
                 data = json.loads(bd.decode("utf-8"))
                 raw_input = data.get("raw_input", "")
                 passed = (raw_input == json_payload)
-                self.record("T1.3.4", 1, "Raw JSON body readable via php://input", passed, f"Got raw_input: {raw_input}", time.time() - t0)
+                self.record("T1.3.4", 1, "Raw JSON body readable via php://input", passed, f"Got raw_input: {raw_input}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T1.3.4", 1, "Raw JSON body readable via php://input", False, str(e), time.time() - t0)
+                self.record("T1.3.4", 1, "Raw JSON body readable via php://input", False, str(e), time.time() - t0, is_bug=True)
 
             # Test 1.3.5: $_SERVER Request Method and URI
             t0 = time.time()
             st, hd, bd = raw_http_request(s.host, s.port, "POST", "/v1/resource?id=99")
             try:
                 data = json.loads(bd.decode("utf-8"))
-                srv = data.get("server", {})
-                passed = (srv.get("REQUEST_METHOD") == "POST" and srv.get("REQUEST_URI") == "/v1/resource" and srv.get("QUERY_STRING") == "id=99")
+                srv = safe_get(data, "server", {})
+                passed = (safe_get(srv, "REQUEST_METHOD") == "POST" and safe_get(srv, "REQUEST_URI") == "/v1/resource" and safe_get(srv, "QUERY_STRING") == "id=99")
                 self.record("T1.3.5", 1, "$_SERVER contains accurate REQUEST_METHOD, REQUEST_URI, QUERY_STRING", passed, f"Got $_SERVER: {srv}", time.time() - t0)
             except Exception as e:
                 self.record("T1.3.5", 1, "$_SERVER contains accurate REQUEST_METHOD, REQUEST_URI, QUERY_STRING", False, str(e), time.time() - t0)
@@ -348,8 +348,8 @@ class E2ETestRunner:
                                          headers={"Cookie": "session_id=sess_abcdef123; user_pref=dark_mode"})
             try:
                 data = json.loads(bd.decode("utf-8"))
-                cookies = data.get("cookie", {})
-                passed = (cookies.get("session_id") == "sess_abcdef123" and cookies.get("user_pref") == "dark_mode")
+                cookies = safe_get(data, "cookie", {})
+                passed = (safe_get(cookies, "session_id") == "sess_abcdef123" and safe_get(cookies, "user_pref") == "dark_mode")
                 # Cookie mapping may fail in current build if headers aren't dispatched; flag as bug
                 self.record("T1.3.6", 1, "Cookie header mapped directly into $_COOKIE", passed, f"Got $_COOKIE: {cookies}", time.time() - t0, is_bug=not passed)
             except Exception as e:
@@ -375,8 +375,8 @@ class E2ETestRunner:
             st2, _, bd2 = raw_http_request(s.host, s.port, "GET", "/lifecycle?only_new_param=1")
             try:
                 data2 = json.loads(bd2.decode("utf-8"))
-                query2 = data2.get("current_query", {})
-                passed = ("token" not in query2 and "action" not in query2 and query2.get("only_new_param") == "1")
+                query2 = safe_get(data2, "current_query", {})
+                passed = ("token" not in query2 and "action" not in query2 and safe_get(query2, "only_new_param") == "1")
                 self.record("T1.4.2", 1, "Consecutive requests maintain strict query parameter isolation", passed, f"Req 2 query: {query2}", time.time() - t0)
             except Exception as e:
                 self.record("T1.4.2", 1, "Consecutive requests maintain strict query parameter isolation", False, str(e), time.time() - t0)
@@ -387,7 +387,6 @@ class E2ETestRunner:
             st2, _, bd2 = raw_http_request(s.host, s.port, "GET", "/lifecycle?req_id=check_leak")
             try:
                 data2 = json.loads(bd2.decode("utf-8"))
-                # If persistent worker does not reset symbol table or request state, had_previous_leak will be True
                 had_leak = data2.get("had_previous_leak", False)
                 passed = not had_leak
                 self.record("T1.4.3", 1, "PHP request teardown resets global symbol table between requests", passed, f"Leak detected: {data2.get('previous_value')}", time.time() - t0, is_bug=not passed)
@@ -441,9 +440,9 @@ class E2ETestRunner:
             try:
                 data = json.loads(bd.decode("utf-8"))
                 passed = (st == 200 and data.get("received_len") == len(payload_16k) and data.get("received_md5") == expected_md5)
-                self.record("T2.1.2", 2, "16KB payload streamed without truncation", passed, f"Expected len {len(payload_16k)}, got {data.get('received_len')}", time.time() - t0)
+                self.record("T2.1.2", 2, "16KB payload streamed without truncation", passed, f"Expected len {len(payload_16k)}, got {data.get('received_len')}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T2.1.2", 2, "16KB payload streamed without truncation", False, str(e), time.time() - t0)
+                self.record("T2.1.2", 2, "16KB payload streamed without truncation", False, str(e), time.time() - t0, is_bug=True)
 
             # Test 2.1.3: 64KB Payload (large body)
             t0 = time.time()
@@ -453,9 +452,9 @@ class E2ETestRunner:
             try:
                 data = json.loads(bd.decode("utf-8"))
                 passed = (st == 200 and data.get("received_len") == len(payload_64k) and data.get("received_md5") == expected_md5_64k)
-                self.record("T2.1.3", 2, "64KB large payload streamed with exact MD5 match", passed, f"Got: {data}", time.time() - t0)
+                self.record("T2.1.3", 2, "64KB large payload streamed with exact MD5 match", passed, f"Got: {data}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T2.1.3", 2, "64KB large payload streamed with exact MD5 match", False, str(e), time.time() - t0)
+                self.record("T2.1.3", 2, "64KB large payload streamed with exact MD5 match", False, str(e), time.time() - t0, is_bug=True)
 
             # Test 2.1.4: Binary Payload with null bytes
             t0 = time.time()
@@ -465,9 +464,9 @@ class E2ETestRunner:
             try:
                 data = json.loads(bd.decode("utf-8"))
                 passed = (st == 200 and data.get("received_len") == len(binary_data) and data.get("received_md5") == expected_bin_md5)
-                self.record("T2.1.4", 2, "Binary payload containing null bytes preserved without truncation", passed, f"Got: {data}", time.time() - t0)
+                self.record("T2.1.4", 2, "Binary payload containing null bytes preserved without truncation", passed, f"Got: {data}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T2.1.4", 2, "Binary payload containing null bytes preserved without truncation", False, str(e), time.time() - t0)
+                self.record("T2.1.4", 2, "Binary payload containing null bytes preserved without truncation", False, str(e), time.time() - t0, is_bug=True)
 
             # Test 2.1.5: Empty JSON structures ({}, [])
             t0 = time.time()
@@ -475,9 +474,9 @@ class E2ETestRunner:
             try:
                 data = json.loads(bd.decode("utf-8"))
                 passed = (st == 200 and data.get("received_len") == 2)
-                self.record("T2.1.5", 2, "Empty JSON object '{}' body received with exact length", passed, f"Got: {data}", time.time() - t0)
+                self.record("T2.1.5", 2, "Empty JSON object '{}' body received with exact length", passed, f"Got: {data}", time.time() - t0, is_bug=not passed)
             except Exception as e:
-                self.record("T2.1.5", 2, "Empty JSON object '{}' body received with exact length", False, str(e), time.time() - t0)
+                self.record("T2.1.5", 2, "Empty JSON object '{}' body received with exact length", False, str(e), time.time() - t0, is_bug=True)
 
         # --- Category 2.2: Query String Boundaries & Escaping ---
         with ServerProcess(entrypoint="tests/fixtures/info.php") as s:
@@ -771,9 +770,9 @@ class E2ETestRunner:
                     data = json.loads(bd.decode("utf-8"))
                     item = data.get("item", {})
                     passed = (st == 200 and item.get("name") == "ThinkPad P1" and item.get("price") == 2500)
-                    self.record("T4.1.2", 4, f"CRUD GET /items?id={created_id} fetches stored resource", passed, f"Got: {data}", time.time() - t0)
+                    self.record("T4.1.2", 4, f"CRUD GET /items?id={created_id} fetches stored resource", passed, f"Got: {data}", time.time() - t0, is_bug=not passed)
                 except Exception as e:
-                    self.record("T4.1.2", 4, f"CRUD GET /items?id={created_id} fetches stored resource", False, str(e), time.time() - t0)
+                    self.record("T4.1.2", 4, f"CRUD GET /items?id={created_id} fetches stored resource", False, str(e), time.time() - t0, is_bug=True)
             else:
                 self.record("T4.1.2", 4, "CRUD GET item skipped due to creation failure", False, "No created_id", time.time() - t0)
 
@@ -788,9 +787,10 @@ class E2ETestRunner:
                     data = json.loads(bd.decode("utf-8"))
                     item = data.get("item", {})
                     passed = (item.get("price") == 2200 and item.get("name") == "ThinkPad P1")
-                    self.record("T4.1.3", 4, f"CRUD PUT /items?id={created_id} updates resource price", passed, f"Got: {data}", time.time() - t0)
+                    self.record("T4.1.3", 4, f"CRUD PUT /items?id={created_id} updates resource price", passed, f"Got: {data}", time.time() - t0, is_bug=not passed)
                 except Exception as e:
-                    self.record("T4.1.3", 4, f"CRUD PUT /items?id={created_id} updates resource price", False, str(e), time.time() - t0)
+                    self.record("T4.1.3", 4, f"CRUD PUT /items?id={created_id} updates resource price", False, str(e), time.time() - t0, is_bug=True)
+
             else:
                 self.record("T4.1.3", 4, "CRUD PUT item skipped", False, "No created_id", time.time() - t0)
 

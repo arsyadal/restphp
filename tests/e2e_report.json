@@ -1,0 +1,549 @@
+{
+  "timestamp": 1788588819.9714742,
+  "total": 60,
+  "passed": 60,
+  "failed": 0,
+  "bugs": 0,
+  "results": [
+    {
+      "test_id": "T1.1.1",
+      "tier": 1,
+      "name": "CLI --help displays serve and eval commands",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 10.46
+    },
+    {
+      "test_id": "T1.1.2",
+      "tier": 1,
+      "name": "CLI --version returns version 0.1.0",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 8.43
+    },
+    {
+      "test_id": "T1.1.3",
+      "tier": 1,
+      "name": "CLI serve --help lists --port, --host, --entrypoint",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 15.07
+    },
+    {
+      "test_id": "T1.1.4",
+      "tier": 1,
+      "name": "CLI eval executes inline PHP code string directly",
+      "passed": true,
+      "is_bug": false,
+      "message": "\ud83d\udc18 [RestPHP] Spawned 1 persistent Zend worker thread(s) (max_requests: 10000)\nRestPHP_CLI_Eval_Success",
+      "duration_ms": 17.01
+    },
+    {
+      "test_id": "T1.1.5",
+      "tier": 1,
+      "name": "Programmatic startup binds and listens on custom port 38599",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 56.99
+    },
+    {
+      "test_id": "T1.1.6",
+      "tier": 1,
+      "name": "Startup with custom entrypoint script loads successfully",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 52.59
+    },
+    {
+      "test_id": "T1.2.1",
+      "tier": 1,
+      "name": "Default endpoint GET / returns HTTP 200 OK",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got status 200",
+      "duration_ms": 1.15
+    },
+    {
+      "test_id": "T1.2.2",
+      "tier": 1,
+      "name": "Default endpoint body contains 'status': 'ok'",
+      "passed": true,
+      "is_bug": false,
+      "message": "Body: {'status': 'ok', 'engine': 'RestPHP', 'version': '0.1.0', 'php_version': '8.4.24', 'method': 'GET', 'uri': '/', 'query': [], 'post': [], 'cookie': [], 'custom_header': None, 'raw_input': '', 'time': 1788588819.038177}",
+      "duration_ms": 0.04
+    },
+    {
+      "test_id": "T1.2.3",
+      "tier": 1,
+      "name": "Default endpoint body contains 'engine': 'RestPHP'",
+      "passed": true,
+      "is_bug": false,
+      "message": "Body: {'status': 'ok', 'engine': 'RestPHP', 'version': '0.1.0', 'php_version': '8.4.24', 'method': 'GET', 'uri': '/', 'query': [], 'post': [], 'cookie': [], 'custom_header': None, 'raw_input': '', 'time': 1788588819.038177}",
+      "duration_ms": 0.02
+    },
+    {
+      "test_id": "T1.2.4",
+      "tier": 1,
+      "name": "Response headers include 'Server: RestPHP/...'",
+      "passed": true,
+      "is_bug": false,
+      "message": "Header: RestPHP/0.1.0",
+      "duration_ms": 0.0
+    },
+    {
+      "test_id": "T1.2.5",
+      "tier": 1,
+      "name": "Response Content-Type is application/json",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: 'application/json', expected: 'application/json'",
+      "duration_ms": 0.0
+    },
+    {
+      "test_id": "T1.2.6",
+      "tier": 1,
+      "name": "Response contains valid PHP 8.x version info",
+      "passed": true,
+      "is_bug": false,
+      "message": "Version: 8.4.24",
+      "duration_ms": 0.01
+    },
+    {
+      "test_id": "T1.3.1",
+      "tier": 1,
+      "name": "Query parameters correctly parsed into $_GET",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got $_GET: {'user': 'alice', 'role': 'developer'}",
+      "duration_ms": 13.23
+    },
+    {
+      "test_id": "T1.3.2",
+      "tier": 1,
+      "name": "Query array parameters parsed into $_GET array",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: ['apple', 'banana']",
+      "duration_ms": 3.91
+    },
+    {
+      "test_id": "T1.3.3",
+      "tier": 1,
+      "name": "Form data parsed into $_POST for urlencoded body",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got $_POST: {'name': 'John Doe', 'email': 'john@example.com', 'age': '30'}",
+      "duration_ms": 2.17
+    },
+    {
+      "test_id": "T1.3.4",
+      "tier": 1,
+      "name": "Raw JSON body readable via php://input",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got raw_input: {\"action\": \"create\", \"id\": 101, \"tags\": [\"rust\", \"php\"]}",
+      "duration_ms": 2.96
+    },
+    {
+      "test_id": "T1.3.5",
+      "tier": 1,
+      "name": "$_SERVER contains accurate REQUEST_METHOD, REQUEST_URI, QUERY_STRING",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got $_SERVER: {'REQUEST_METHOD': 'POST', 'REQUEST_URI': '/v1/resource', 'QUERY_STRING': 'id=99', 'SERVER_SOFTWARE': 'RestPHP/0.1.0', 'SERVER_PROTOCOL': 'HTTP/1.1', 'GATEWAY_INTERFACE': 'CGI/1.1', 'CONTENT_LENGTH': '0', 'HTTP_HOST': '127.0.0.1:44695', 'SERVER_NAME': '127.0.0.1:44695', 'HTTP_ACCEPT_ENCODING': 'identity', 'REQUEST_TIME_FLOAT': 1788588819.117529, 'REQUEST_TIME': 1788588819, 'argv': ['id=99'], 'argc': 1}",
+      "duration_ms": 2.47
+    },
+    {
+      "test_id": "T1.3.6",
+      "tier": 1,
+      "name": "Cookie header mapped directly into $_COOKIE",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got $_COOKIE: {'session_id': 'sess_abcdef123', 'user_pref': 'dark_mode'}",
+      "duration_ms": 1.9
+    },
+    {
+      "test_id": "T1.4.1",
+      "tier": 1,
+      "name": "10 consecutive requests execute cleanly without crashing",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 9.87
+    },
+    {
+      "test_id": "T1.4.2",
+      "tier": 1,
+      "name": "Consecutive requests maintain strict query parameter isolation",
+      "passed": true,
+      "is_bug": false,
+      "message": "Req 2 query: {'only_new_param': '1'}",
+      "duration_ms": 1.12
+    },
+    {
+      "test_id": "T1.4.3",
+      "tier": 1,
+      "name": "PHP request teardown resets global symbol table between requests",
+      "passed": true,
+      "is_bug": false,
+      "message": "Leak detected: None",
+      "duration_ms": 1.22
+    },
+    {
+      "test_id": "T1.4.4",
+      "tier": 1,
+      "name": "Sequential alternating HTTP methods transition cleanly",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 5.58
+    },
+    {
+      "test_id": "T1.4.5",
+      "tier": 1,
+      "name": "Sustained request recycling loop completes 25 requests with 100% 200 OK",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 20.9
+    },
+    {
+      "test_id": "T2.1.1",
+      "tier": 2,
+      "name": "Empty POST body (0 bytes) handled cleanly",
+      "passed": true,
+      "is_bug": false,
+      "message": "Data: {'received_len': 0, 'received_md5': 'd41d8cd98f00b204e9800998ecf8427e', 'first_16_hex': '', 'last_16_hex': ''}",
+      "duration_ms": 3.67
+    },
+    {
+      "test_id": "T2.1.2",
+      "tier": 2,
+      "name": "16KB payload streamed without truncation",
+      "passed": true,
+      "is_bug": false,
+      "message": "Expected len 16384, got 16384",
+      "duration_ms": 2.68
+    },
+    {
+      "test_id": "T2.1.3",
+      "tier": 2,
+      "name": "64KB large payload streamed with exact MD5 match",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'received_len': 65536, 'received_md5': '83dae421f1cb08530ff14a2c266eff0f', 'first_16_hex': '42424242424242424242424242424242', 'last_16_hex': '42424242424242424242424242424242'}",
+      "duration_ms": 3.93
+    },
+    {
+      "test_id": "T2.1.4",
+      "tier": 2,
+      "name": "Binary payload containing null bytes preserved without truncation",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'received_len': 2048, 'received_md5': '1576a94d6cb334dd126cb1c27f19e0f2', 'first_16_hex': '000102030405060708090a0b0c0d0e0f', 'last_16_hex': 'f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff'}",
+      "duration_ms": 2.01
+    },
+    {
+      "test_id": "T2.1.5",
+      "tier": 2,
+      "name": "Empty JSON object '{}' body received with exact length",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'received_len': 2, 'received_md5': '99914b932bd37a50b983c5e7c90ae93b', 'first_16_hex': '7b7d', 'last_16_hex': '7b7d'}",
+      "duration_ms": 1.99
+    },
+    {
+      "test_id": "T2.2.1",
+      "tier": 2,
+      "name": "Trailing '?' with empty query string produces empty $_GET",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: []",
+      "duration_ms": 2.06
+    },
+    {
+      "test_id": "T2.2.2",
+      "tier": 2,
+      "name": "URL-encoded special characters (&, =, +, quotes) correctly decoded",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'text': 'Hello World!', 'math': '1+1=2', 'quote': '\"escaped\"'}",
+      "duration_ms": 1.2
+    },
+    {
+      "test_id": "T2.2.3",
+      "tier": 2,
+      "name": "UTF-8 multilingual unicode in query string properly preserved",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'city': 'M\u00fcnchen', 'lang': '\u65e5\u672c\u8a9e'}",
+      "duration_ms": 0.8
+    },
+    {
+      "test_id": "T2.2.4",
+      "tier": 2,
+      "name": "Valueless query flags (?flag&active) recognized in $_GET",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'flag': '', 'active': ''}",
+      "duration_ms": 0.7
+    },
+    {
+      "test_id": "T2.2.5",
+      "tier": 2,
+      "name": "2KB long query string with 50 parameters parsed without buffer overrun",
+      "passed": true,
+      "is_bug": false,
+      "message": "Keys parsed: 50",
+      "duration_ms": 1.23
+    },
+    {
+      "test_id": "T2.3.1",
+      "tier": 2,
+      "name": "Missing Cookie header does not cause null dereference or crash",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: []",
+      "duration_ms": 1.19
+    },
+    {
+      "test_id": "T2.3.2",
+      "tier": 2,
+      "name": "Empty Cookie header handled cleanly",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 0.61
+    },
+    {
+      "test_id": "T2.3.3",
+      "tier": 2,
+      "name": "Malformed Cookie header with redundant semicolons handled without crash",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 0.63
+    },
+    {
+      "test_id": "T2.3.4",
+      "tier": 2,
+      "name": "Custom request header mapped to $_SERVER['HTTP_X_RESTPHP_TRACE']",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got server vars: {'REQUEST_METHOD': 'GET', 'REQUEST_URI': '/custom-headers', 'QUERY_STRING': '', 'SERVER_SOFTWARE': 'RestPHP/0.1.0', 'SERVER_PROTOCOL': 'HTTP/1.1', 'GATEWAY_INTERFACE': 'CGI/1.1', 'CONTENT_LENGTH': '0', 'HTTP_HOST': '127.0.0.1:41799', 'SERVER_NAME': '127.0.0.1:41799', 'HTTP_ACCEPT_ENCODING': 'identity', 'HTTP_X_RESTPHP_TRACE': 'trace_9999', 'REQUEST_TIME_FLOAT': 1788588819.406357, 'REQUEST_TIME': 1788588819, 'argv': [], 'argc': 0}",
+      "duration_ms": 0.73
+    },
+    {
+      "test_id": "T2.3.5",
+      "tier": 2,
+      "name": "Mixed-case HTTP headers handled without parser rejection",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 2.14
+    },
+    {
+      "test_id": "T2.4.1",
+      "tier": 2,
+      "name": "HTTP PUT method accepted and processed",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 1.29
+    },
+    {
+      "test_id": "T2.4.2",
+      "tier": 2,
+      "name": "HTTP DELETE method accepted and processed",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 1.09
+    },
+    {
+      "test_id": "T2.4.3",
+      "tier": 2,
+      "name": "HTTP PATCH method accepted and processed",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 200",
+      "duration_ms": 1.11
+    },
+    {
+      "test_id": "T2.4.4",
+      "tier": 2,
+      "name": "PHP http_response_code(201) reflected in HTTP response status",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got status: 201, expected 201",
+      "duration_ms": 1.18
+    },
+    {
+      "test_id": "T2.4.5",
+      "tier": 2,
+      "name": "PHP http_response_code(404) reflected in HTTP response status",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got status: 404, expected 404",
+      "duration_ms": 6.76
+    },
+    {
+      "test_id": "T2.4.6",
+      "tier": 2,
+      "name": "PHP http_response_code(204) reflected in HTTP response status",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got status: 204, expected 204",
+      "duration_ms": 1.88
+    },
+    {
+      "test_id": "T3.1",
+      "tier": 3,
+      "name": "Query params + Form POST + Cookie header simultaneously populated",
+      "passed": true,
+      "is_bug": false,
+      "message": "GET:{'filter': 'active', 'sort': 'desc'}, POST:{'form_key': 'hello_post', 'amount': '99'}, COOKIE:{'uid': 'user_77', 'authtoken': 'xyz987'}",
+      "duration_ms": 2.41
+    },
+    {
+      "test_id": "T3.2",
+      "tier": 3,
+      "name": "Query params + JSON body stream + Cookie simultaneously accessible",
+      "passed": true,
+      "is_bug": false,
+      "message": "GET:{'action': 'sync', 'v': '2'}, Input matches:True, COOKIE:{'session': 'sess_combo'}",
+      "duration_ms": 1.25
+    },
+    {
+      "test_id": "T3.3",
+      "tier": 3,
+      "name": "32KB payload + Query params + Custom headers integrated smoothly",
+      "passed": true,
+      "is_bug": false,
+      "message": "len_ok:True, md5_ok:True, q_ok:True",
+      "duration_ms": 1.81
+    },
+    {
+      "test_id": "T3.4",
+      "tier": 3,
+      "name": "Dynamic HTTP 201 status + Custom response header combined",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 201, Headers: {'x-powered-by': 'PHP/8.4.24', 'x-custom-resource': 'Created-12345', 'content-type': 'application/json', 'server': 'RestPHP/0.1.0', 'content-length': '132', 'date': 'Sat, 05 Sep 2026 06:13:39 GMT'}",
+      "duration_ms": 2.56
+    },
+    {
+      "test_id": "T3.5",
+      "tier": 3,
+      "name": "UTF-8 multilingual data preserved across Query and POST body",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'query': {'tag': '\u3053\u3093\u306b\u3061\u306f'}, 'post': {'message': 'Bonjour le monde, caf\u00e9 & th\u00e9'}, 'cookie': {'locale': 'fr_FR', 'greeting': '\u0437\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435'}, 'raw_input': 'message=Bonjour%20le%20monde%2C%20caf%C3%A9%20%26%20th%C3%A9', 'server_uri': '/utf8'}",
+      "duration_ms": 1.16
+    },
+    {
+      "test_id": "T3.6",
+      "tier": 3,
+      "name": "Rapid alternating payload sequence (JSON -> GET -> Form -> Binary) succeeds",
+      "passed": true,
+      "is_bug": false,
+      "message": "Statuses: [200, 200, 200, 200]",
+      "duration_ms": 4.33
+    },
+    {
+      "test_id": "T4.1.1",
+      "tier": 4,
+      "name": "CRUD POST /items creates resource and returns created entity",
+      "passed": true,
+      "is_bug": false,
+      "message": "Status: 201, Data: {'status': 'created', 'item': {'id': '1', 'name': 'ThinkPad P1', 'price': 2500, 'category': 'workstation'}}",
+      "duration_ms": 1.7
+    },
+    {
+      "test_id": "T4.1.2",
+      "tier": 4,
+      "name": "CRUD GET /items?id=1 fetches stored resource",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'status': 'ok', 'item': {'id': '1', 'name': 'ThinkPad P1', 'price': 2500, 'category': 'workstation'}}",
+      "duration_ms": 1.89
+    },
+    {
+      "test_id": "T4.1.3",
+      "tier": 4,
+      "name": "CRUD PUT /items?id=1 updates resource price",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'status': 'updated', 'item': {'id': '1', 'name': 'ThinkPad P1', 'price': 2200, 'category': 'workstation'}}",
+      "duration_ms": 1.6
+    },
+    {
+      "test_id": "T4.1.4",
+      "tier": 4,
+      "name": "CRUD GET /items returns array of active resources",
+      "passed": true,
+      "is_bug": false,
+      "message": "Items count: 1",
+      "duration_ms": 1.18
+    },
+    {
+      "test_id": "T4.1.5",
+      "tier": 4,
+      "name": "CRUD DELETE /items?id=1 deletes resource",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'status': 'deleted', 'item': {'id': '1', 'name': 'ThinkPad P1', 'price': 2200, 'category': 'workstation'}}",
+      "duration_ms": 1.76
+    },
+    {
+      "test_id": "T4.1.6",
+      "tier": 4,
+      "name": "CRUD GET deleted resource returns not found",
+      "passed": true,
+      "is_bug": false,
+      "message": "Got: {'status': 'error', 'message': 'Item not found'}",
+      "duration_ms": 1.47
+    },
+    {
+      "test_id": "T4.2.1",
+      "tier": 4,
+      "name": "High-concurrency stress test: 100 requests across 10 threads (100% 200 OK, 2744.3 req/s)",
+      "passed": true,
+      "is_bug": false,
+      "message": "Success rate: 100/100",
+      "duration_ms": 36.44
+    },
+    {
+      "test_id": "T4.2.2",
+      "tier": 4,
+      "name": "Rapid sequential test: 50 requests with 0 dropped connections (1361.4 req/s)",
+      "passed": true,
+      "is_bug": false,
+      "message": "",
+      "duration_ms": 36.73
+    },
+    {
+      "test_id": "T4.3.1",
+      "tier": 4,
+      "name": "Server recovers immediately after PHP notice and processes subsequent requests",
+      "passed": true,
+      "is_bug": false,
+      "message": "st1=200, st2=200",
+      "duration_ms": 1.84
+    },
+    {
+      "test_id": "T4.3.2",
+      "tier": 4,
+      "name": "Server recovers immediately after PHP warning and processes subsequent requests",
+      "passed": true,
+      "is_bug": false,
+      "message": "st1=200, st2=200",
+      "duration_ms": 1.09
+    }
+  ]
+}
