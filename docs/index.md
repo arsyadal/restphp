@@ -54,21 +54,7 @@ features:
 
 <HeroTerminal />
 
-<div class="benchmark-hero-container">
-
-## The Fastest PHP Runtime on Earth
-
-Measured head-to-head under high-concurrency loads on modern 64-core Linux servers.
-
-| Runtime Engine | Architecture | Host GC | Latency p99 | Peak RAM (10k req) | Throughput (RPS) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **RestPHP** | **Rust + Zend C-FFI** | **Zero GC (RAII)** | **1.2 ms** (Deterministic) | **~12 MB** | **52,400+ req/s** |
-| FrankenPHP | Go (Caddy) + cgo | Go GC (STW pauses) | 4.8 ms (Jittery) | ~68 MB | 38,100 req/s |
-| RoadRunner | Go + Goridge IPC | Go GC (STW pauses) | 5.6 ms (IPC cost) | ~58 MB | 34,200 req/s |
-| Swoole | C++ Extension | Manual (Crash risks) | 1.9 ms (Fast) | ~35 MB | 46,800 req/s |
-| Nginx + PHP-FPM | FastCGI (Cold Boot) | None (Process teardown)| 42.0 ms (Slow) | ~140 MB | 4,200 req/s |
-
-</div>
+<BenchmarkChart />
 
 ---
 

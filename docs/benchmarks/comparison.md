@@ -4,7 +4,9 @@ RestPHP is engineered to deliver maximum throughput, minimal memory usage, and r
 
 ---
 
-## 📊 Head-to-Head Comparison
+<BenchmarkChart />
+
+## Detailed Metrics Breakdown
 
 | Metric / Dimension | Nginx + PHP-FPM | RoadRunner (Go) | FrankenPHP (Go) | Swoole (C++) | 🦀 **RestPHP (Rust)** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
