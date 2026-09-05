@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 tokio = { version = "1.38", features = ["full"] }
-axum = { version = "0.7", features = ["tokio", "http1", "http2"] }
+axum = { version = "0.8", features = ["tokio", "http1", "http2"] }
 hyper = { version = "1.4", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 bytes = "1.6"
