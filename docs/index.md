@@ -65,8 +65,8 @@ Install, build, and serve any PHP application in seconds:
 ::: code-group
 
 ```bash [Single Command Startup]
-# Start high-concurrency server on port 8080
-restphp serve --port 8080 --entrypoint public/index.php
+# Just run restphp — auto-detects Laravel, public/index.php, or index.php!
+restphp
 ```
 
 ```bash [Laravel Octane]
@@ -79,8 +79,9 @@ php artisan octane:restphp --port 8000
 
 ```bash [CLI Evaluation]
 # Execute PHP code directly in-memory from terminal
-restphp eval 'echo "PHP Version: " . PHP_VERSION . "\n";'
+restphp -e 'echo "PHP Version: " . PHP_VERSION . "\n";'
 ```
+
 
 :::
 

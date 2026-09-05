@@ -73,7 +73,7 @@ php artisan octane:restphp --port 8000
 ### 3. Evaluate Inline PHP Code
 
 ```bash
-restphp eval 'echo "PHP Version: " . PHP_VERSION . "\n";'
+restphp -e 'echo "PHP Version: " . PHP_VERSION . "\n";'
 ```
 
 ---

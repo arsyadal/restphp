@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ServerState {
-    pub worker: WorkerHandle,
+    pub worker: Arc<tokio::sync::RwLock<WorkerHandle>>,
     pub default_script: String,
 }
 
@@ -21,7 +21,7 @@ pub async fn run_http_server(
     host: &str,
     port: u16,
     script_path: &str,
-    worker: WorkerHandle,
+    worker: Arc<tokio::sync::RwLock<WorkerHandle>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(ServerState {
         worker,
@@ -77,8 +77,9 @@ async fn handle_php_request(
 
     let target = ExecutionTarget::File(std::path::PathBuf::from(state.default_script.clone()));
 
-    match state
-        .worker
+    let worker = state.worker.read().await.clone();
+
+    match worker
         .dispatch_with_headers(
             target,
             method_str,

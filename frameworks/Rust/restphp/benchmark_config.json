@@ -1,0 +1,18 @@
+{
+  "framework": "restphp",
+  "language": "PHP",
+  "web_server": "restphp",
+  "os": "Linux",
+  "database_os": "Linux",
+  "approach": "Realistic",
+  "classification": "Fullstack",
+  "tests": [
+    {
+      "default": {
+        "json_url": "/json",
+        "plaintext_url": "/plaintext",
+        "port": 8080
+      }
+    }
+  ]
+}

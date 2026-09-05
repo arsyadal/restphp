@@ -1,15 +1,15 @@
 # RestPHP CLI Commands
 
-RestPHP is distributed as a single standalone executable with built-in commands.
+RestPHP is distributed as a single standalone executable with built-in commands. The CLI supports zero-config Bun-style execution.
 
 ---
 
-## 1. `restphp serve`
+## 1. Zero-Config Serve
 
-Starts the high-performance asynchronous HTTP application server.
+Starts the high-performance asynchronous HTTP application server. RestPHP auto-detects common entrypoints like `public/index.php` or `index.php`.
 
 ```bash
-restphp serve [OPTIONS]
+restphp [ENTRYPOINT] [OPTIONS]
 ```
 
 ### Options
@@ -18,38 +18,40 @@ restphp serve [OPTIONS]
 | :--- | :--- | :--- | :--- |
 | `--host` | | `0.0.0.0` | IP address to bind to |
 | `--port` | `-p` | `8080` | Port to listen on |
-| `--entrypoint` | `-e` | `public/index.php` | Path to entrypoint PHP script file |
 | `--workers` | `-w` | `1` | Number of persistent worker OS threads |
 | `--max-requests`| `-m` | `10000` | Max requests before worker is recycled (0 for unlimited) |
 
 ### Examples
 
 ```bash
-# Serve local Laravel application on port 8000
-restphp serve -p 8000 -e /var/www/laravel/public/index.php
+# Auto-detect entrypoint and start server
+restphp
+
+# Serve specific script on port 3000
+restphp app.php -p 3000
 
 # High-concurrency mode with 4 workers on port 80
-restphp serve --host 0.0.0.0 --port 80 --workers 4
+restphp --host 0.0.0.0 -p 80 -w 4
 ```
 
 ---
 
-## 2. `restphp eval`
+## 2. Evaluate Code (`-e`)
 
 Evaluates inline PHP code directly from memory inside a persistent Zend VM context.
 
 ```bash
-restphp eval "<php_code>"
+restphp -e "<php_code>"
 ```
 
 ### Examples
 
 ```bash
 # Print current PHP version
-restphp eval 'echo PHP_VERSION . PHP_EOL;'
+restphp -e 'echo PHP_VERSION . PHP_EOL;'
 
 # Test JSON encoding
-restphp eval 'echo json_encode(["status" => "ok", "engine" => "RestPHP"]);'
+restphp -e 'echo json_encode(["status" => "ok", "engine" => "RestPHP"]);'
 ```
 
 ---
@@ -58,5 +60,5 @@ restphp eval 'echo json_encode(["status" => "ok", "engine" => "RestPHP"]);'
 
 | Flag | Description |
 | :--- | :--- |
-| `--help` / `-h` | Display help information and subcommands |
+| `--help` / `-h` | Display help information |
 | `--version` / `-V` | Display RestPHP version |

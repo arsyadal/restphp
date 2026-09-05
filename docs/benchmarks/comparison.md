@@ -8,19 +8,20 @@ RestPHP is engineered to deliver maximum throughput, minimal memory usage, and r
 
 ## Detailed Metrics Breakdown
 
-| Metric / Dimension | Nginx + PHP-FPM | RoadRunner (Go) | FrankenPHP (Go) | Swoole (C++) | 🦀 **RestPHP (Rust)** |
+| Dimension / Feature | **Nginx + PHP-FPM** | **RoadRunner (Go)** | **FrankenPHP (Go)** | **Swoole (C++)** | 🦀 **RestPHP (Rust)** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Language Runtime** | C | Go | Go (Caddy) | C++ | **Rust 2021 (Zero-Cost)** |
+| **Language Runtime** | C | Go | Go (via Caddy) | C++ | **Rust 2021 (Zero-Cost)** |
 | **Execution Model** | Cold boot per req | Persistent Worker | Persistent Worker | Coroutine Event Loop | **Persistent Worker (Actor)** |
 | **PHP Binding Method** | FastCGI TCP/Unix socket | IPC Pipes / Protobuf | `cgo` (stack switch cost) | PHP C Extension | **Zero-Cost C-ABI (`extern "C"`)** |
 | **Host Garbage Collection** | None | Go GC (Stop-the-World) | Go GC + PHP GC (**Double GC**) | Manual C++ | **Zero Host GC (Compile-time RAII)** |
-| **Tail Latency (p99)** | ~42 ms (Slow) | ~5.6 ms (Jittery) | ~4.8 ms (Jittery) | ~1.9 ms (Fast) | **🔥 1.2 ms (Rock solid)** |
-| **Peak RAM (10k reqs)** | ~140 MB | ~58 MB | ~68 MB | ~35 MB | **🔥 ~12 MB (Ultra-lightweight)** |
+| **Tail Latency (p99)** | ~42 ms (Slow) | ~5.6 ms (Jittery) | ~4.8 ms (Jittery) | ~1.9 ms (Fast) | **🔥 1.2 ms (Ultra-consistent)** |
+| **Base Memory Footprint** | ~30–80 MB / worker | ~40–70 MB | ~60–120 MB | ~25–50 MB | **🔥 < 15 MB (Ultra-lightweight)** |
 | **Throughput (RPS)** | ~4,200 req/s | ~34,200 req/s | ~38,100 req/s | ~46,800 req/s | **🔥 52,400+ req/s** |
-| **PHP Extension Compatibility**| 100% | 100% | 100% | ⚠️ Many conflicts | **100% (Native Zend VM)** |
-| **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Safe (Borrow Checker)** |
-| **Single Binary CLI** | ❌ Needs Nginx+FPM | ✅ Single Binary (`rr`) | ✅ Single Binary | ❌ Needs `.so` extension | **✅ Single Static Binary (`restphp`)** |
-| **Laravel Octane Support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **✅ 1st-Class Native Driver** |
+| **Async I/O Engine** | epoll | Go netpoller | Go netpoller | Custom epoll/kqueue | **Tokio / Axum (Zero-copy)** |
+| **PHP Extension Compatibility** | 100% Compatible | 100% Compatible | 100% Compatible | ⚠️ Frequent conflicts | **100% Compatible (Native Zend VM)** |
+| **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Memory Safe (Borrow Checker)** |
+| **Single Binary CLI** | ❌ Needs Nginx + FPM | ✅ Single Binary (`rr`) | ✅ Single Binary | ❌ Needs `.so` extension | **✅ Single Static Binary (`restphp`)** |
+| **Laravel Octane Support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **✅ 1st-Class Native Adapter** |
 
 ---
 

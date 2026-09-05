@@ -26,6 +26,10 @@ struct Cli {
     #[arg(short = 'e', long = "eval")]
     eval: Option<String>,
 
+    /// Watch for PHP file changes and hot-reload
+    #[arg(long)]
+    watch: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -50,6 +54,10 @@ enum Commands {
         /// Maximum requests per worker before recycling (0 = unlimited)
         #[arg(short = 'm', long, default_value_t = 10000)]
         max_requests: u64,
+
+        /// Watch for PHP file changes and hot-reload
+        #[arg(long)]
+        watch: bool,
     },
     /// Evaluate inline PHP code directly from memory
     Eval {
@@ -89,18 +97,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // 2. Resolve host, port, workers, and entrypoint
-    let (host, port, entrypoint, workers, max_requests) = match cli.command {
+    let (host, port, entrypoint, workers, max_requests, watch) = match cli.command {
         Some(Commands::Serve {
             host,
             port,
             entrypoint,
             workers,
             max_requests,
-        }) => (host, port, entrypoint, workers, max_requests),
+            watch,
+        }) => (host, port, entrypoint, workers, max_requests, watch),
         _ => {
             let host = cli.host.unwrap_or_else(|| "0.0.0.0".to_string());
             let workers = cli.workers.unwrap_or(1);
             let max_requests = 10000;
+            let watch = cli.watch;
 
             // Smart entrypoint detection (like Bun)
             let (entrypoint, default_port) = if let Some(ref file) = cli.file {
@@ -121,12 +131,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let port = cli.port.unwrap_or(default_port);
-            (host, port, entrypoint, workers, max_requests)
+            (host, port, entrypoint, workers, max_requests, watch)
         }
     };
 
     let worker = WorkerHandle::new_pool(workers, max_requests)
         .map_err(|e| format!("Worker init failed: {}", e))?;
+    let worker = std::sync::Arc::new(tokio::sync::RwLock::new(worker));
+
+    if watch {
+        #[cfg(feature = "hot-reload")]
+        {
+            let watcher_worker = worker.clone();
+            tokio::task::spawn_blocking(move || {
+                use notify::{RecursiveMode, Watcher};
+                let (tx, rx) = std::sync::mpsc::channel();
+                if let Ok(mut watcher) = notify::recommended_watcher(tx) {
+                    let _ = watcher.watch(std::path::Path::new("."), RecursiveMode::Recursive);
+                    for res in rx {
+                        match res {
+                            Ok(event) => {
+                                if event
+                                    .paths
+                                    .iter()
+                                    .any(|p| p.extension().is_some_and(|ext| ext == "php"))
+                                {
+                                    println!("🔄 [RestPHP] Detected PHP file change. Recycling workers...");
+                                    if let Ok(new_worker) =
+                                        restphp::WorkerHandle::new_pool(workers, max_requests)
+                                    {
+                                        tokio::runtime::Handle::current().block_on(async {
+                                            *watcher_worker.write().await = new_worker;
+                                        });
+                                    }
+                                }
+                            }
+                            Err(e) => println!("watch error: {:?}", e),
+                        }
+                    }
+                }
+            });
+        }
+        #[cfg(not(feature = "hot-reload"))]
+        {
+            println!("⚠️ [RestPHP] Watch mode requested but 'hot-reload' feature is not enabled.");
+        }
+    }
 
     // Auto-create sample file if entrypoint doesn't exist yet
     if !std::path::Path::new(&entrypoint).exists() {

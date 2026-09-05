@@ -73,7 +73,7 @@ echo json_encode([
 ### 3. Start the Server
 
 ```bash
-restphp serve --port 8080 --entrypoint public/index.php
+restphp -p 8080
 ```
 
 Open your browser or run:
