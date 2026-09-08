@@ -46,6 +46,13 @@ pub struct TestServer {
 
 impl TestServer {
     pub fn start(entrypoint: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::start_with_max_requests(entrypoint, 10_000)
+    }
+
+    pub fn start_with_max_requests(
+        entrypoint: &str,
+        max_requests: u64,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let port = get_ephemeral_port();
         let bin_path = std::env::current_exe()?
             .parent()
@@ -66,6 +73,8 @@ impl TestServer {
                 &port.to_string(),
                 "--entrypoint",
                 entrypoint,
+                "--max-requests",
+                &max_requests.to_string(),
             ])
             .spawn()?;
 
@@ -311,6 +320,19 @@ fn test_tier1_lifecycle_consecutive_requests() {
         let resp = send_http_request(server.port, "GET", &path, &[], None)
             .expect("Sequential request should succeed");
         assert_eq!(resp.status_code, 200);
+    }
+}
+
+#[test]
+fn test_tier1_lifecycle_worker_recycles_without_losing_capacity() {
+    let server = TestServer::start_with_max_requests("tests/fixtures/lifecycle.php", 2)
+        .expect("Server should start");
+
+    for request_id in 0..5 {
+        let path = format!("/lifecycle?req_id={}", request_id);
+        let response = send_http_request(server.port, "GET", &path, &[], None)
+            .expect("Request should succeed after worker recycling");
+        assert_eq!(response.status_code, 200);
     }
 }
 

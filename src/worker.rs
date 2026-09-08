@@ -166,20 +166,10 @@ impl WorkerHandle {
 
 /// Main loop for a single worker thread.
 fn worker_loop(id: usize, receiver: crossbeam_channel::Receiver<WorkerJob>, max_requests: u64) {
-    tracing::info!("🐘 [Worker-{}] Initializing dedicated PHP VM...", id);
-
-    let engine = match PhpEngine::init() {
-        Ok(e) => e,
-        Err(err) => {
-            tracing::error!("❌ [Worker-{}] Failed to initialize PhpEngine: {}", id, err);
-            return;
-        }
+    let mut engine = match init_engine(id) {
+        Ok(engine) => engine,
+        Err(()) => return,
     };
-
-    tracing::info!(
-        "✅ [Worker-{}] PHP VM initialized. Ready for persistent requests.",
-        id
-    );
 
     let mut local_count: u64 = 0;
 
@@ -251,15 +241,21 @@ fn worker_loop(id: usize, receiver: crossbeam_channel::Receiver<WorkerJob>, max_
 
         let _ = job.respond_to.send(resp);
 
-        // Worker recycling: if max_requests is set and reached, break and let
-        // the thread exit. A supervisor can respawn if needed.
+        // Recycle the VM in place so this worker remains attached to the shared
+        // queue. Exiting here would permanently reduce pool capacity because
+        // there is no supervisor responsible for replacing terminated threads.
         if max_requests > 0 && local_count >= max_requests {
             tracing::info!(
                 "♻️ [Worker-{}] Reached max_requests ({}), recycling...",
                 id,
                 max_requests
             );
-            break;
+            drop(engine);
+            engine = match init_engine(id) {
+                Ok(engine) => engine,
+                Err(()) => break,
+            };
+            local_count = 0;
         }
     }
 
@@ -269,6 +265,24 @@ fn worker_loop(id: usize, receiver: crossbeam_channel::Receiver<WorkerJob>, max_
         local_count
     );
     // PhpEngine::drop() calls restphp_sapi_teardown()
+}
+
+fn init_engine(id: usize) -> Result<PhpEngine, ()> {
+    tracing::info!("🐘 [Worker-{}] Initializing dedicated PHP VM...", id);
+
+    match PhpEngine::init() {
+        Ok(engine) => {
+            tracing::info!(
+                "✅ [Worker-{}] PHP VM initialized. Ready for persistent requests.",
+                id
+            );
+            Ok(engine)
+        }
+        Err(err) => {
+            tracing::error!("❌ [Worker-{}] Failed to initialize PhpEngine: {}", id, err);
+            Err(())
+        }
+    }
 }
 
 /// Builds the `$_SERVER` superglobal variables from HTTP request metadata.
