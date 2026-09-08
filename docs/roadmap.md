@@ -26,7 +26,7 @@ The development of **RestPHP** follows a strict multi-phase architecture bluepri
 - [x] **Milestone 4: Persistent Worker Loop & Laravel Octane Adapter**
   - Per-request lifecycle (`php_request_startup` -> handler -> `php_request_shutdown`).
   - State reset verified across 60/60 E2E tests (100% pass rate).
-  - Released `restphp/octane` Composer package for 1st-class Laravel integration.
+  - Released an experimental `restphp/octane` Composer package; a production boot-once bridge remains pending.
 
 - [x] **Milestone 5: Benchmarking Suite & TechEmpower**
   - Automated comparative benchmarks vs FrankenPHP and Swoole.

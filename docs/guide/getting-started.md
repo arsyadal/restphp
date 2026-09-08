@@ -62,24 +62,14 @@ restphp app.php -p 3000
 restphp -e 'echo "Hello from RestPHP!\n";'
 ```
 
-### 2. Laravel Octane Integration
+### 2. Laravel applications
 
-Install the official RestPHP adapter:
-
-```bash
-composer require restphp/octane
-```
-
-Run persistent Laravel server:
-
-```bash
-php artisan octane:restphp --port 8000
-```
+Serve a conventional Laravel application through its `public/index.php` entrypoint. Laravel Octane boot-once persistence is not supported by the current runtime and must not be used for production.
 
 ---
 
 ## 🎯 Next Steps
 
 - Explore [CLI Commands](/guide/cli-commands) for serve and eval options.
-- Supercharge your Laravel app with the [Laravel Octane Adapter](/frameworks/laravel-octane).
+- Review the [Laravel runtime status](/frameworks/laravel-octane).
 - Understand how RestPHP eliminates latency spikes in [Architecture Overview](/architecture/overview).

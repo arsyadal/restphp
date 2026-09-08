@@ -18,8 +18,10 @@ restphp [ENTRYPOINT] [OPTIONS]
 | :--- | :--- | :--- | :--- |
 | `--host` | | `0.0.0.0` | IP address to bind to |
 | `--port` | `-p` | `8080` | Port to listen on |
-| `--workers` | `-w` | `1` | Number of persistent worker OS threads |
-| `--max-requests`| `-m` | `10000` | Max requests before worker is recycled (0 for unlimited) |
+| `--workers` | `-w` | `1` | Must be `1` for the current NTS PHP runtime; scale with multiple processes |
+| `--max-requests`| `-m` | `0` | Requests before graceful process drain and supervisor restart (`0` is unlimited) |
+| `--max-body-bytes` | | `16777216` | Maximum request body size |
+| `--max-queue` | | `256` | Maximum requests waiting for the PHP worker |
 
 ### Examples
 
@@ -30,8 +32,8 @@ restphp
 # Serve specific script on port 3000
 restphp app.php -p 3000
 
-# High-concurrency mode with 4 workers on port 80
-restphp --host 0.0.0.0 -p 80 -w 4
+# Request a supervisor-managed recycle after 10,000 requests
+restphp --host 0.0.0.0 -p 80 --max-requests 10000
 ```
 
 ---

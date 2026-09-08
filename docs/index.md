@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "RestPHP"
   text: "The Blazing-Fast PHP Runtime"
-  tagline: "Persistent Application Server & Runtime powered by Rust. Zero Host GC. Zero CGO Overhead. Outperforming FrankenPHP, RoadRunner, and Swoole."
+  tagline: "PHP runtime powered by Rust with a custom Zend SAPI bridge. Production hardening is in progress."
   actions:
     - theme: brand
       text: Get Started →
@@ -36,17 +36,17 @@ hero:
   <div class="feature-card">
     <div class="feature-icon"><img src="/icons/shield.svg" alt="Zero Host Garbage Collection" /></div>
     <h3 class="feature-title">Zero Host Garbage Collection</h3>
-    <p class="feature-desc">Rust compile-time ownership (RAII) manages server memory. No Stop-The-World pauses; guarantees ultra-predictable p99 tail latency.</p>
+    <p class="feature-desc">Rust compile-time ownership (RAII) manages host memory without a host garbage collector.</p>
   </div>
   <div class="feature-card">
     <div class="feature-icon"><img src="/icons/cpu.svg" alt="Persistent Worker Architecture" /></div>
     <h3 class="feature-title">Persistent Worker Architecture</h3>
-    <p class="feature-desc">Dedicated OS threads host isolated Zend VM instances. Boots your app once into RAM; zero file-reloading overhead on incoming requests.</p>
+    <p class="feature-desc">One dedicated worker thread hosts the current NTS PHP runtime. Scale with supervisor-managed processes.</p>
   </div>
   <div class="feature-card">
-    <div class="feature-icon"><img src="/icons/rocket.svg" alt="1st-Class Laravel Octane Driver" /></div>
-    <h3 class="feature-title">1st-Class Laravel Octane Driver</h3>
-    <p class="feature-desc">Official adapter package (<code>restphp/octane</code>). Supercharge existing Laravel applications up to 10x throughput with zero code changes.</p>
+    <div class="feature-icon"><img src="/icons/rocket.svg" alt="Laravel runtime status" /></div>
+    <h3 class="feature-title">Laravel support</h3>
+    <p class="feature-desc">Conventional Laravel applications can run through <code>public/index.php</code>. Octane boot-once persistence is not yet supported.</p>
   </div>
   <div class="feature-card">
     <div class="feature-icon"><img src="/icons/box.svg" alt="Single Standalone Binary" /></div>
@@ -54,9 +54,9 @@ hero:
     <p class="feature-desc">Shipped as a single static executable (<code>restphp</code>). No Nginx, PHP-FPM, or Caddy configuration required.</p>
   </div>
   <div class="feature-card">
-    <div class="feature-icon"><img src="/icons/plug.svg" alt="100% PHP Extension Compatible" /></div>
-    <h3 class="feature-title">100% PHP Extension Compatible</h3>
-    <p class="feature-desc">Works seamlessly with all native PHP extensions (PDO, MySQL, Redis, OPcache, cURL) without dangerous coroutine monkey-patching.</p>
+    <div class="feature-icon"><img src="/icons/plug.svg" alt="Native Zend embedding" /></div>
+    <h3 class="feature-title">Native Zend embedding</h3>
+    <p class="feature-desc">RestPHP embeds the Zend engine directly; a production extension compatibility matrix is in progress.</p>
   </div>
 </div>
 
@@ -71,14 +71,6 @@ Install, build, and serve any PHP application in seconds:
 ```bash [Single Command Startup]
 # Just run restphp — auto-detects Laravel, public/index.php, or index.php!
 restphp
-```
-
-```bash [Laravel Octane]
-# Install official RestPHP adapter
-composer require restphp/octane
-
-# Start persistent Laravel server
-php artisan octane:restphp --port 8000
 ```
 
 ```bash [CLI Evaluation]
@@ -121,7 +113,7 @@ graph TD
 
 ## Architectural Comparison
 
-Why does RestPHP outperform Go and C++ alternatives?
+How does RestPHP's architecture differ from Go and C++ alternatives?
 
 ```mermaid
 graph LR

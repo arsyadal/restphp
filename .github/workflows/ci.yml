@@ -33,4 +33,6 @@ jobs:
         run: cargo build --verbose
 
       - name: Run Tests
-        run: cargo test --verbose
+        # Zend's embed SAPI owns process-global state, so Rust test binaries must
+        # not exercise it from parallel test threads.
+        run: cargo test --verbose -- --test-threads=1

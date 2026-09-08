@@ -1,7 +1,7 @@
 # RestPHP 🦀🐘
 
 > **The Blazing-Fast, Persistent Application Server & Runtime for PHP powered by Rust.**  
-> Zero Host GC, zero CGO overhead, and first-class Laravel Octane persistent workers.
+> A Rust-hosted PHP runtime with a custom Zend SAPI bridge. Production hardening is in progress.
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/php-8.2%20|%208.3%20|%208.4-777bb4.svg)](https://www.php.net/)
@@ -22,7 +22,9 @@ Traditional PHP operates on a **shared-nothing architecture**: every incoming HT
 
 ---
 
-## 📊 Architectural & Benchmark Comparison
+## 📊 Architectural comparison
+
+RestPHP's performance figures are not yet independently validated across identical workloads and deployment environments. Reproduce the published benchmark methodology before making production capacity decisions.
 
 | Dimension / Feature | **Nginx + PHP-FPM** | **RoadRunner (Go)** | **FrankenPHP (Go)** | **Swoole (C++)** | 🦀 **RestPHP (Rust)** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -30,14 +32,14 @@ Traditional PHP operates on a **shared-nothing architecture**: every incoming HT
 | **Execution Model** | Cold boot per req | Persistent Worker | Persistent Worker | Coroutine Event Loop | **Persistent Worker (Actor)** |
 | **PHP Binding Method** | FastCGI TCP/Unix socket | IPC Pipes / Protobuf | `cgo` (stack switch cost) | PHP C Extension | **Zero-Cost C-ABI (`extern "C"`)** |
 | **Host Garbage Collection** | None | Go GC (Stop-the-World) | Go GC + PHP GC (**Double GC**) | Manual C++ | **Zero Host GC (Compile-time RAII)** |
-| **Tail Latency (p99)** | ~42 ms (Slow) | ~5.6 ms (Jittery) | ~4.8 ms (Jittery) | ~1.9 ms (Fast) | **🔥 1.2 ms (Ultra-consistent)** |
-| **Base Memory Footprint** | ~30–80 MB / worker | ~40–70 MB | ~60–120 MB | ~25–50 MB | **🔥 < 15 MB (Ultra-lightweight)** |
-| **Throughput (RPS)** | ~4,200 req/s | ~34,200 req/s | ~38,100 req/s | ~46,800 req/s | **🔥 52,400+ req/s** |
+| **Tail Latency (p99)** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **Pending reproducible benchmark** |
+| **Base Memory Footprint** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **Pending reproducible benchmark** |
+| **Throughput (RPS)** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **Pending reproducible benchmark** |
 | **Async I/O Engine** | epoll | Go netpoller | Go netpoller | Custom epoll/kqueue | **Tokio / Axum (Zero-copy)** |
-| **PHP Extension Compatibility** | 100% Compatible | 100% Compatible | 100% Compatible | ⚠️ Frequent conflicts | **100% Compatible (Native Zend VM)** |
+| **PHP Extension Compatibility** | Varies | Varies | Varies | Varies | **Native Zend embedding; compatibility matrix pending** |
 | **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Memory Safe (Borrow Checker)** |
 | **Single Binary CLI** | ❌ Needs Nginx + FPM | ✅ Single Binary (`rr`) | ✅ Single Binary | ❌ Needs `.so` extension | **✅ Single Static Binary (`restphp`)** |
-| **Laravel Octane Support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **✅ 1st-Class Native Adapter** |
+| **Laravel Octane boot-once support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **⚠️ Not yet supported** |
 
 ---
 
@@ -90,19 +92,9 @@ restphp app.php -p 3000
 restphp -e 'echo "Hello from RestPHP!\n";'
 ```
 
-### 2. Laravel Octane Integration
+### 2. Laravel applications
 
-Install the official RestPHP adapter:
-
-```bash
-composer require restphp/octane
-```
-
-Run persistent Laravel server:
-
-```bash
-php artisan octane:restphp --port 8000
-```
+RestPHP can serve a Laravel application's `public/index.php` through its standard request lifecycle. The `restphp/octane` package is present as an experimental adapter, but boot-once Octane persistence is not yet supported; do not use it for production workloads.
 
 ### 3. Evaluate Inline PHP Code
 
@@ -145,7 +137,7 @@ graph TD
 - [x] **Milestone 1**: Zend Engine C-FFI Core Embedding (Verified in memory)
 - [x] **Milestone 2**: Custom SAPI Implementation (`ub_write`, `send_headers`, superglobals)
 - [x] **Milestone 3**: Async Tokio HTTP Server & REST routing (Verified with live `curl`)
-- [x] **Milestone 4**: Persistent Zend Worker Actor, State Reset, 60/60 E2E test pass & Laravel Octane Adapter ([`octane/`](octane/))
+- [ ] **Milestone 4 follow-up**: Production lifecycle hardening and a real Laravel Octane boot-once bridge.
 - [x] **Milestone 5**: Micro-benchmarks vs FrankenPHP, TechEmpower configs, Hot Reload & VitePress Docs ([`benchmarks/`](benchmarks/))
 
 See [`ROADMAP.md`](ROADMAP.md) for granular task tracking.

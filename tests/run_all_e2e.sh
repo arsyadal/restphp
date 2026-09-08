@@ -15,8 +15,8 @@ echo ">>> 1. Building RestPHP debug binary..."
 cargo build
 
 echo ""
-echo ">>> 2. Running Rust Integration Test Suite (cargo test --test e2e_test_suite)..."
-cargo test --test e2e_test_suite -- --nocapture
+echo ">>> 2. Running Rust Integration Test Suite serially (Zend embed SAPI is process-global)..."
+cargo test --test e2e_test_suite -- --test-threads=1 --nocapture
 
 echo ""
 echo ">>> 3. Running Comprehensive 4-Tier Python E2E Test Suite..."

@@ -1,6 +1,6 @@
 # Benchmarks & Architectural Comparison
 
-RestPHP is engineered to deliver maximum throughput, minimal memory usage, and rock-solid tail latency (p99).
+This page describes architecture and a reproducible benchmark workflow. RestPHP has no independently validated comparative performance figures yet; do not use the table below for production capacity planning.
 
 ---
 
@@ -14,14 +14,14 @@ RestPHP is engineered to deliver maximum throughput, minimal memory usage, and r
 | **Execution Model** | Cold boot per req | Persistent Worker | Persistent Worker | Coroutine Event Loop | **Persistent Worker (Actor)** |
 | **PHP Binding Method** | FastCGI TCP/Unix socket | IPC Pipes / Protobuf | `cgo` (stack switch cost) | PHP C Extension | **Zero-Cost C-ABI (`extern "C"`)** |
 | **Host Garbage Collection** | None | Go GC (Stop-the-World) | Go GC + PHP GC (**Double GC**) | Manual C++ | **Zero Host GC (Compile-time RAII)** |
-| **Tail Latency (p99)** | ~42 ms (Slow) | ~5.6 ms (Jittery) | ~4.8 ms (Jittery) | ~1.9 ms (Fast) | **🔥 1.2 ms (Ultra-consistent)** |
-| **Base Memory Footprint** | ~30–80 MB / worker | ~40–70 MB | ~60–120 MB | ~25–50 MB | **🔥 < 15 MB (Ultra-lightweight)** |
-| **Throughput (RPS)** | ~4,200 req/s | ~34,200 req/s | ~38,100 req/s | ~46,800 req/s | **🔥 52,400+ req/s** |
+| **Tail Latency (p99)** | Benchmark required | Benchmark required | Benchmark required | Benchmark required | **Pending reproducible benchmark** |
+| **Base Memory Footprint** | Benchmark required | Benchmark required | Benchmark required | Benchmark required | **Pending reproducible benchmark** |
+| **Throughput (RPS)** | Benchmark required | Benchmark required | Benchmark required | Benchmark required | **Pending reproducible benchmark** |
 | **Async I/O Engine** | epoll | Go netpoller | Go netpoller | Custom epoll/kqueue | **Tokio / Axum (Zero-copy)** |
-| **PHP Extension Compatibility** | 100% Compatible | 100% Compatible | 100% Compatible | ⚠️ Frequent conflicts | **100% Compatible (Native Zend VM)** |
+| **PHP Extension Compatibility** | Varies | Varies | Varies | Varies | **Compatibility matrix pending** |
 | **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Memory Safe (Borrow Checker)** |
 | **Single Binary CLI** | ❌ Needs Nginx + FPM | ✅ Single Binary (`rr`) | ✅ Single Binary | ❌ Needs `.so` extension | **✅ Single Static Binary (`restphp`)** |
-| **Laravel Octane Support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **✅ 1st-Class Native Adapter** |
+| **Laravel Octane boot-once support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **⚠️ Not yet supported** |
 
 ---
 
@@ -29,7 +29,7 @@ RestPHP is engineered to deliver maximum throughput, minimal memory usage, and r
 
 ---
 
-## 🔬 Deep-Dive: Why RestPHP Wins
+## 🔬 Architectural design goals
 
 ### 1. Eliminating the CGO Tax (~60ns per call)
 FrankenPHP relies on Go's `cgo` layer to communicate with the Zend Engine. Go's runtime uses non-standard stack frames (goroutines), so every transition from Go to C requires:

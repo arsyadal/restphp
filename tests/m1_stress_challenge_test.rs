@@ -602,17 +602,18 @@ fn resp_clean_body(resp: &PhpResponse) -> &[u8] {
     &resp.body
 }
 
-/// Adversarial Challenge Test: Proves that setting headers after output or with invalid
-/// formatting crashes the server process with SIGSEGV (signal 11) because `sapi_module.sapi_error`
-/// is NULL in `c/sapi.c`.
+/// Regression test for the SAPI error callback: a header attempt after output must not
+/// terminate the hosting process, and the same engine must service the next request.
 #[test]
-fn test_reproduce_sapi_error_null_segfault() {
-    // Child process mode: execute the crashing code
+fn test_sapi_error_after_output_does_not_terminate_or_poison_engine() {
+    // Keep this in a child process. A regression must be reported as a normal test
+    // failure rather than taking down the full integration-test binary.
     if std::env::var("RESTPHP_CRASH_SUBPROCESS").is_ok() {
         let engine = PhpEngine::init().unwrap();
-        // Calling header after output triggers sapi_header_op -> sapi_module.sapi_error(...)
+        // PHP will report that headers have already been sent, but SAPI must safely
+        // format/report that error rather than dereferencing a NULL callback.
         let code = "echo 'Output commenced;'; header('X-Crash: 1');";
-        let _ = execute_eval(
+        let (response, _) = execute_eval(
             &engine,
             code,
             "GET",
@@ -621,28 +622,44 @@ fn test_reproduce_sapi_error_null_segfault() {
             None,
             None,
         );
+        assert!(
+            response.success,
+            "header-after-output request should complete"
+        );
+        assert!(
+            String::from_utf8_lossy(&response.body).contains("Output commenced;"),
+            "output written before the header warning must be retained"
+        );
+
+        let (recovery, _) = execute_eval(
+            &engine,
+            "echo 'engine-recovered';",
+            "GET",
+            bytes::Bytes::new(),
+            Vec::new(),
+            None,
+            None,
+        );
+        assert!(recovery.success, "subsequent request should succeed");
+        assert_eq!(recovery.body, b"engine-recovered");
         return;
     }
 
-    // Parent test mode: spawn subprocess and assert that it was killed by SIGSEGV (signal 11)
+    // Parent mode asserts normal child termination. Do not make a signal (including
+    // SIGSEGV) an expected result: that would encode the bug as success.
     let exe = std::env::current_exe().expect("Failed to get current test exe path");
     let output = std::process::Command::new(exe)
-        .arg("test_reproduce_sapi_error_null_segfault")
+        .arg("test_sapi_error_after_output_does_not_terminate_or_poison_engine")
         .arg("--nocapture")
         .env("RESTPHP_CRASH_SUBPROCESS", "1")
         .output()
         .expect("Failed to spawn crash reproduction subprocess");
 
-    use std::os::unix::process::ExitStatusExt;
-    let signal = output.status.signal();
-    println!(
-        "Subprocess terminated: status={:?}, signal={:?}",
-        output.status, signal
-    );
-
     assert_eq!(
-        signal,
-        Some(11),
-        "Empirically verified bug: subprocess must be killed with signal 11 (SIGSEGV) due to NULL sapi_error callback!"
+        output.status.code(),
+        Some(0),
+        "header-after-output child must exit normally; stdout: {}; stderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
     );
 }

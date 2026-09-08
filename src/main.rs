@@ -1,218 +1,251 @@
 use clap::{Parser, Subcommand};
-use restphp::{ExecutionTarget, WorkerHandle};
+use restphp::{
+    server::{ServerConfig, ServerControl, DEFAULT_MAX_BODY_BYTES, DEFAULT_MAX_QUEUE},
+    ExecutionTarget, WorkerHandle,
+};
+use std::{path::Path, sync::Arc, time::Duration};
 
 #[derive(Parser)]
 #[command(name = "restphp")]
-#[command(about = "The Blazing-Fast, Persistent Application Server & Runtime for PHP", long_about = None)]
+#[command(about = "The Blazing-Fast, Persistent Application Server & Runtime for PHP")]
 #[command(version = "0.1.0")]
 struct Cli {
     /// Optional PHP script to execute or serve (e.g. `restphp index.php`)
     #[arg(value_name = "FILE")]
     file: Option<String>,
-
     /// Port to listen on (e.g. `restphp -p 8080`)
     #[arg(short, long)]
     port: Option<u16>,
-
     /// Host IP address to bind to
     #[arg(long)]
     host: Option<String>,
-
-    /// Number of worker threads
+    /// Number of PHP workers. The current NTS runtime supports only one.
     #[arg(short, long)]
     workers: Option<usize>,
-
     /// Evaluate PHP code directly from memory (e.g. `restphp -e 'echo 123;'`)
     #[arg(short = 'e', long = "eval")]
     eval: Option<String>,
-
-    /// Watch for PHP file changes and hot-reload
+    /// Watch mode is temporarily unavailable while process-safe reload is redesigned.
     #[arg(long)]
     watch: bool,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the high-performance RestPHP async HTTP server
+    /// Start the RestPHP HTTP server
     Serve {
         #[arg(long, default_value = "0.0.0.0")]
         host: String,
-
         #[arg(short, long, default_value_t = 8080)]
         port: u16,
-
         #[arg(short, long, default_value = "public/index.php")]
         entrypoint: String,
-
-        /// Number of persistent Zend worker OS threads (default 1 for NTS PHP)
+        /// Must be 1 for the current NTS PHP runtime.
         #[arg(short, long, default_value_t = 1)]
         workers: usize,
-
-        /// Maximum requests per worker before recycling (0 = unlimited)
-        #[arg(short = 'm', long, default_value_t = 10000)]
+        /// Requests before graceful process drain; 0 disables recycling.
+        #[arg(short = 'm', long, default_value_t = 0)]
         max_requests: u64,
-
-        /// Watch for PHP file changes and hot-reload
+        /// Maximum accepted request body bytes.
+        #[arg(long, default_value_t = DEFAULT_MAX_BODY_BYTES)]
+        max_body_bytes: usize,
+        /// Maximum jobs waiting for or executing on the PHP worker.
+        #[arg(long, default_value_t = DEFAULT_MAX_QUEUE)]
+        max_queue: usize,
+        /// Maximum seconds to wait for accepted requests during shutdown.
+        #[arg(long, default_value_t = 30)]
+        shutdown_timeout_secs: u64,
+        /// Watch mode is temporarily unavailable while process-safe reload is redesigned.
         #[arg(long)]
         watch: bool,
     },
     /// Evaluate inline PHP code directly from memory
-    Eval {
-        /// PHP code string to execute
-        code: String,
-    },
+    Eval { code: String },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt::try_init().ok();
     let cli = Cli::parse();
 
-    // 1. Direct inline eval via `restphp -e "..."` or `restphp eval "..."`
-    if let Some(code) = cli.eval.or_else(|| {
-        if let Some(Commands::Eval { code }) = &cli.command {
-            Some(code.clone())
-        } else {
-            None
-        }
+    if let Some(code) = cli.eval.or_else(|| match &cli.command {
+        Some(Commands::Eval { code }) => Some(code.clone()),
+        _ => None,
     }) {
-        let worker =
-            WorkerHandle::new_pool(1, 10000).map_err(|e| format!("Worker init failed: {}", e))?;
-        let resp = worker
+        let mut worker =
+            WorkerHandle::new_pool(1, 0).map_err(|error| format!("Worker init failed: {error}"))?;
+        let response = worker
             .dispatch(
                 ExecutionTarget::Inline(code),
                 "CLI".into(),
                 "/cli".into(),
                 "".into(),
-                vec![],
+                Vec::new(),
             )
             .await
-            .map_err(|e| format!("Execution failed: {}", e))?;
-
-        let body_str = String::from_utf8_lossy(&resp.body);
-        print!("{}", body_str);
+            .map_err(|error| format!("Execution failed: {error}"))?;
+        print!("{}", String::from_utf8_lossy(&response.body));
+        worker.shutdown();
         return Ok(());
     }
 
-    // 2. Resolve host, port, workers, and entrypoint
-    let (host, port, entrypoint, workers, max_requests, watch) = match cli.command {
+    let options = match cli.command {
         Some(Commands::Serve {
             host,
             port,
             entrypoint,
             workers,
             max_requests,
+            max_body_bytes,
+            max_queue,
+            shutdown_timeout_secs,
             watch,
-        }) => (host, port, entrypoint, workers, max_requests, watch),
+        }) => ServeOptions {
+            host,
+            port,
+            entrypoint,
+            workers,
+            max_requests,
+            max_body_bytes,
+            max_queue,
+            shutdown_timeout_secs,
+            watch,
+        },
         _ => {
-            let host = cli.host.unwrap_or_else(|| "0.0.0.0".to_string());
-            let workers = cli.workers.unwrap_or(1);
-            let max_requests = 10000;
-            let watch = cli.watch;
-
-            // Smart entrypoint detection (like Bun)
-            let (entrypoint, default_port) = if let Some(ref file) = cli.file {
-                (file.clone(), 8080)
-            } else if std::path::Path::new("artisan").exists() {
+            let entrypoint = if let Some(file) = cli.file {
+                file
+            } else if Path::new("artisan").exists() {
                 println!("✨ Detected Laravel project (artisan found)");
-                if std::path::Path::new("octane/bin/restphp-worker.php").exists() {
-                    ("octane/bin/restphp-worker.php".to_string(), 8000)
-                } else {
-                    ("public/index.php".to_string(), 8000)
-                }
-            } else if std::path::Path::new("public/index.php").exists() {
-                ("public/index.php".to_string(), 8080)
-            } else if std::path::Path::new("index.php").exists() {
-                ("index.php".to_string(), 8080)
+                "public/index.php".to_string()
+            } else if Path::new("public/index.php").exists() {
+                "public/index.php".to_string()
             } else {
-                ("public/index.php".to_string(), 8080)
+                "index.php".to_string()
             };
-
-            let port = cli.port.unwrap_or(default_port);
-            (host, port, entrypoint, workers, max_requests, watch)
+            ServeOptions {
+                host: cli.host.unwrap_or_else(|| "0.0.0.0".to_string()),
+                port: cli.port.unwrap_or(8080),
+                entrypoint,
+                workers: cli.workers.unwrap_or(1),
+                max_requests: 0,
+                max_body_bytes: DEFAULT_MAX_BODY_BYTES,
+                max_queue: DEFAULT_MAX_QUEUE,
+                shutdown_timeout_secs: 30,
+                watch: cli.watch,
+            }
         }
     };
 
-    let worker = WorkerHandle::new_pool(workers, max_requests)
-        .map_err(|e| format!("Worker init failed: {}", e))?;
-    let worker = std::sync::Arc::new(tokio::sync::RwLock::new(worker));
+    if options.watch {
+        return Err(
+            "--watch is temporarily unavailable while process-safe reload is redesigned".into(),
+        );
+    }
+    if options.shutdown_timeout_secs == 0 {
+        return Err("--shutdown-timeout-secs must be greater than zero".into());
+    }
 
-    if watch {
-        #[cfg(feature = "hot-reload")]
-        {
-            let watcher_worker = worker.clone();
-            tokio::task::spawn_blocking(move || {
-                use notify::{RecursiveMode, Watcher};
-                let (tx, rx) = std::sync::mpsc::channel();
-                if let Ok(mut watcher) = notify::recommended_watcher(tx) {
-                    let _ = watcher.watch(std::path::Path::new("."), RecursiveMode::Recursive);
-                    let mut last_reload = std::time::Instant::now();
-                    for res in rx {
-                        match res {
-                            Ok(event) => {
-                                if event
-                                    .paths
-                                    .iter()
-                                    .any(|p| p.extension().is_some_and(|ext| ext == "php"))
-                                {
-                                    if last_reload.elapsed() < std::time::Duration::from_millis(500)
-                                    {
-                                        continue;
-                                    }
-                                    last_reload = std::time::Instant::now();
-                                    println!("🔄 [RestPHP] Detected PHP file change. Recycling workers...");
-                                    tokio::runtime::Handle::current().block_on(async {
-                                        let mut pool = watcher_worker.write().await;
-                                        pool.shutdown();
-                                        if let Ok(new_worker) =
-                                            restphp::WorkerHandle::new_pool(workers, max_requests)
-                                        {
-                                            *pool = new_worker;
-                                        }
-                                    });
-                                }
-                            }
-                            Err(e) => println!("watch error: {:?}", e),
-                        }
-                    }
+    let entrypoint = std::fs::canonicalize(&options.entrypoint).map_err(|error| {
+        format!(
+            "Entrypoint '{}' does not exist or cannot be resolved: {error}",
+            options.entrypoint
+        )
+    })?;
+    if !entrypoint.is_file() {
+        return Err(format!(
+            "Entrypoint '{}' is not a regular file",
+            entrypoint.display()
+        )
+        .into());
+    }
+    let entrypoint = entrypoint.to_string_lossy().into_owned();
+
+    let config = ServerConfig {
+        max_body_bytes: options.max_body_bytes,
+        max_queue: options.max_queue,
+    };
+    config
+        .validate()
+        .map_err(|error| format!("Invalid server configuration: {error}"))?;
+
+    let worker =
+        WorkerHandle::new_pool_with_queue(options.workers, options.max_requests, options.max_queue)
+            .map_err(|error| format!("Worker init failed: {error}"))?;
+    let mut drain_notifier = worker.drain_notifier();
+    let worker = Arc::new(tokio::sync::RwLock::new(worker));
+    let control = ServerControl::new();
+    let shutdown_control = control.clone();
+    let shutdown = async move {
+        tokio::select! {
+            _ = shutdown_signal() => tracing::info!("Shutdown signal received; draining RestPHP"),
+            result = drain_notifier.changed() => {
+                if result.is_ok() && *drain_notifier.borrow() {
+                    tracing::info!("Request recycle limit reached; draining for supervisor restart");
                 }
-            });
+            }
         }
-        #[cfg(not(feature = "hot-reload"))]
-        {
-            println!("⚠️ [RestPHP] Watch mode requested but 'hot-reload' feature is not enabled.");
+        shutdown_control.close_admission();
+    };
+
+    let server = restphp::server::run_http_server_with_config_and_shutdown(
+        &options.host,
+        options.port,
+        &entrypoint,
+        Arc::clone(&worker),
+        config,
+        control,
+        shutdown,
+    );
+    let outcome =
+        tokio::time::timeout(Duration::from_secs(options.shutdown_timeout_secs), server).await;
+
+    match outcome {
+        Ok(result) => {
+            worker.write().await.shutdown();
+            result?;
+            Ok(())
+        }
+        Err(_) => {
+            // PHP execution cannot be safely cancelled from another thread. Do
+            // not call `shutdown()` here: joining an unbounded user script
+            // would defeat the deadline. A supervisor replaces this process.
+            tracing::error!(
+                "Graceful shutdown deadline exceeded; terminating for supervisor restart"
+            );
+            std::process::exit(1);
         }
     }
+}
 
-    // Auto-create sample file if entrypoint doesn't exist yet
-    if !std::path::Path::new(&entrypoint).exists() {
-        if let Some(parent) = std::path::Path::new(&entrypoint).parent() {
-            let _ = std::fs::create_dir_all(parent);
+struct ServeOptions {
+    host: String,
+    port: u16,
+    entrypoint: String,
+    workers: usize,
+    max_requests: u64,
+    max_body_bytes: usize,
+    max_queue: usize,
+    shutdown_timeout_secs: u64,
+    watch: bool,
+}
+
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+
+        let mut terminate = signal(SignalKind::terminate()).expect("install SIGTERM handler");
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = terminate.recv() => {},
         }
-        let sample_code = r#"<?php
-header("Content-Type: application/json");
-echo json_encode([
-    "status" => "ok",
-    "engine" => "RestPHP",
-    "version" => "0.1.0",
-    "php_version" => PHP_VERSION,
-    "method" => $_SERVER["REQUEST_METHOD"] ?? "GET",
-    "uri" => $_SERVER["REQUEST_URI"] ?? "/",
-    "query" => $_GET,
-    "time" => microtime(true),
-], JSON_PRETTY_PRINT);
-"#;
-        let _ = std::fs::write(&entrypoint, sample_code);
-        println!("✨ Created sample entrypoint file at: {}", entrypoint);
     }
-
-    let entrypoint = std::fs::canonicalize(&entrypoint)
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or(entrypoint);
-
-    restphp::server::run_http_server(&host, port, &entrypoint, worker).await?;
-
-    Ok(())
+    #[cfg(not(unix))]
+    {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("install Ctrl-C handler");
+    }
 }

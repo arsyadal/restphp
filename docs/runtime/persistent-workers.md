@@ -1,6 +1,6 @@
 # Persistent Worker Architecture
 
-RestPHP replaces the traditional, costly per-request process creation model with a **persistent worker architecture** written in Rust.
+RestPHP runs one embedded PHP runtime per process and performs PHP request startup and shutdown for each HTTP request. This is the supported production model for the current non-thread-safe (NTS) PHP build.
 
 ---
 
@@ -18,22 +18,16 @@ This cycle means that **over 70% of CPU time is wasted re-bootstrapping framewor
 
 ---
 
-## The RestPHP Persistent Model
+## The RestPHP Runtime Model
 
-RestPHP reverses this paradigm:
-- **Boot Once in RAM**: Framework code (like Laravel, Symfony, or custom applications) is loaded into the Zend VM's memory space once during server initialization.
-- **Persistent OS Worker Threads**: Dedicated OS threads maintain active Zend VM instances.
-- **Request Dispatch Queue**: Incoming HTTP requests received by the asynchronous Tokio/Axum front-end are dispatched across lock-free crossbeam channels directly to waiting worker actors.
-- **Zero Framework Reloading**: Consecutive requests execute directly against the already-booted application in memory, yielding tens of thousands of requests per second.
+RestPHP keeps the embedded PHP runtime available in one dedicated worker thread. Incoming requests are admitted through a bounded queue, then execute a complete PHP request lifecycle. NTS PHP has process-global state, so `--workers` is intentionally limited to `1`; scale horizontally with multiple RestPHP processes behind a supervisor or load balancer.
 
 ```mermaid
 graph TD
     A[Incoming HTTP Request] --> B[Tokio Async Front-End]
     B --> C[Lock-Free Crossbeam Channel]
-    C --> D[Worker Thread 1: Persistent Zend VM]
-    C --> E[Worker Thread 2: Persistent Zend VM]
-    D --> F[Bailout-Protected Request Execution]
-    E --> F
+    C --> D[One Worker Thread: PHP Runtime]
+    D --> F[Bailout-Protected Request Lifecycle]
     F --> G[Oneshot Response Channel]
     G --> B
 ```
@@ -44,16 +38,16 @@ graph TD
 
 While persistent execution offers massive performance gains, poorly written userland PHP code or third-party packages might have subtle memory leaks in static properties.
 
-RestPHP provides built-in worker recycling:
+RestPHP can ask an external supervisor to recycle the process:
 ```bash
-# Gracefully recycle worker after 10,000 requests (default)
+# Request a graceful process drain after 10,000 requests
 restphp --max-requests 10000
 
 # Run with unlimited worker lifetime
 restphp --max-requests 0
 ```
 
-When a worker reaches its request limit:
+When the process reaches its request limit:
 1. It completes its current in-flight request cleanly.
-2. The Zend VM performs full module shutdown and garbage collection.
-3. A fresh worker thread is spawned seamlessly without dropping incoming connections.
+2. It stops admitting new requests and drains work already accepted.
+3. It exits successfully; systemd, a container orchestrator, or another process supervisor starts a replacement.

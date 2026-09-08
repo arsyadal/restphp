@@ -42,4 +42,4 @@ graph LR
 Rust does not have a runtime garbage collector:
 - **Deterministic Destruction (RAII)**: Memory allocated for incoming requests, headers, and responses is freed the exact microsecond the variable falls out of scope.
 - **No Background Sweepers**: Zero background CPU cycles are spent scanning heap pointers.
-- **Rock-Solid Tail Latency**: Under sustained high-load concurrency benchmarks (100+ concurrent connections), RestPHP maintains an ultra-flat p99 latency curve of **~1.2 ms**.
+- **Tail-latency objective**: the Rust host has no garbage collector; p99 behavior still requires reproducible workload-specific benchmarks.

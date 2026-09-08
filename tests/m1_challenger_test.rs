@@ -54,7 +54,7 @@ fn test_thread_safety_engine_is_not_send_sync() {
     // is_send::<PhpEngine>();
 
     // Verify runtime actor serialization via WorkerHandle under concurrency
-    let worker = WorkerHandle::new().expect("WorkerHandle should initialize");
+    let mut worker = WorkerHandle::new().expect("WorkerHandle should initialize");
     let mut handles = Vec::new();
 
     for thread_id in 0..10 {
@@ -93,6 +93,10 @@ fn test_thread_safety_engine_is_not_send_sync() {
     for h in handles {
         h.join().expect("Worker thread client should join cleanly");
     }
+
+    // The pool owner, rather than one of its clones, owns the worker join handle.
+    // Always close and join it before the process-global Zend test mutex is released.
+    worker.shutdown();
 }
 
 // =========================================================================

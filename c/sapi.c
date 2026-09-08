@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <stdarg.h>
 
 #include <main/php.h>
 #include <main/SAPI.h>
@@ -39,6 +40,27 @@ extern void   restphp_rs_log_message(const char *message, int syslog_type_int);
 static int restphp_sapi_startup(sapi_module_struct *sapi_module) {
     (void)sapi_module;
     return SUCCESS;
+}
+
+/*
+ * PHP invokes sapi_error directly for SAPI-level failures. Leaving this callback
+ * NULL makes error paths depend on internal fallbacks and has caused crashes
+ * after output/header interactions. Format once and route it through Rust
+ * tracing just like log_message.
+ */
+static void restphp_sapi_error(int type, const char *error_msg, ...) {
+    char message[2048];
+    va_list args;
+
+    if (!error_msg) {
+        restphp_rs_log_message("PHP SAPI error with no message", type);
+        return;
+    }
+
+    va_start(args, error_msg);
+    (void)vsnprintf(message, sizeof(message), error_msg, args);
+    va_end(args);
+    restphp_rs_log_message(message, type);
 }
 
 /*
@@ -91,7 +113,7 @@ static sapi_module_struct restphp_sapi_module = {
     restphp_rs_flush,                      /* flush */
     NULL,                                  /* get_stat */
     NULL,                                  /* getenv */
-    NULL,                                  /* sapi_error: NULL routes through php_error_cb to ub_write */
+    restphp_sapi_error,                    /* sapi_error */
     NULL,                                  /* header_handler */
     restphp_sapi_send_headers,             /* send_headers */
     NULL,                                  /* send_header (intentionally NULL) */
@@ -123,14 +145,18 @@ static sapi_module_struct restphp_sapi_module = {
  * Subsystem Lifecycle Implementation
  */
 
-void restphp_sapi_init(void) {
+int restphp_sapi_init(void) {
     signal(SIGPIPE, SIG_IGN);
     zend_signal_startup();
     restphp_sapi_module.php_ini_ignore = 1;
     restphp_sapi_module.php_ini_ignore_cwd = 1;
     sapi_startup(&restphp_sapi_module);
     sapi_register_post_entries(restphp_post_entries);
-    php_module_startup(&restphp_sapi_module, NULL);
+    if (php_module_startup(&restphp_sapi_module, NULL) == FAILURE) {
+        sapi_shutdown();
+        return FAILURE;
+    }
+    return SUCCESS;
 }
 
 void restphp_sapi_teardown(void) {
@@ -166,6 +192,16 @@ void restphp_set_request_info(
 
 void restphp_set_cookie_data(char *cookie_data) {
     SG(request_info).cookie_data = cookie_data;
+}
+
+void restphp_clear_request_info(void) {
+    /*
+     * All request_info string pointers and server_context point to Rust stack
+     * storage. Clear every field only after request shutdown (or a failed
+     * startup) so a later request cannot dereference stale CStrings/context.
+     */
+    SG(server_context) = NULL;
+    memset(&SG(request_info), 0, sizeof(SG(request_info)));
 }
 
 void *restphp_get_server_context(void) {

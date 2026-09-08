@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 /* Subsystem Lifecycle */
-void restphp_sapi_init(void);
+int restphp_sapi_init(void);
 void restphp_sapi_teardown(void);
 
 /* Request Metadata & Lifecycle */
@@ -25,6 +25,7 @@ void restphp_set_request_info(
 );
 
 void restphp_set_cookie_data(char *cookie_data);
+void restphp_clear_request_info(void);
 
 int restphp_request_startup_safe(void);
 int restphp_request_shutdown_safe(void);

@@ -11,7 +11,7 @@ extern "C" {
     // =========================================================================
 
     /// Initializes RestPHP SAPI module and boots PHP module subsystem.
-    pub fn restphp_sapi_init();
+    pub fn restphp_sapi_init() -> c_int;
 
     /// Shuts down PHP module subsystem and SAPI module.
     pub fn restphp_sapi_teardown();
@@ -34,6 +34,10 @@ extern "C" {
 
     /// Configures `SG(request_info).cookie_data`.
     pub fn restphp_set_cookie_data(cookie_data: *mut c_char);
+
+    /// Clears non-owning request pointers after startup failure or request
+    /// shutdown so no SAPI callback can observe stale Rust-owned storage.
+    pub fn restphp_clear_request_info();
 
     /// Safely prepares per-request memory manager and activates SAPI with bailout protection.
     pub fn restphp_request_startup_safe() -> c_int;
