@@ -846,13 +846,95 @@ fn test_tier4_error_resilience() {
 
 #[test]
 fn test_tier4_php_fatal_does_not_poison_next_request() {
-    let server = TestServer::start("tests/fixtures/error.php").expect("Server should start");
+    let port = get_ephemeral_port();
+    let log_path = std::env::temp_dir().join(format!(
+        "restphp-fatal-diagnostics-{}-{port}.log",
+        std::process::id()
+    ));
+    let log = std::fs::File::create(&log_path).unwrap();
+    let child = Command::new(env!("CARGO_BIN_EXE_restphp"))
+        .args([
+            "serve",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            &port.to_string(),
+            "--entrypoint",
+            "tests/fixtures/error.php",
+        ])
+        .env("RUST_LOG", "restphp=error,php=off")
+        .env("NO_COLOR", "1")
+        .stdout(log.try_clone().unwrap())
+        .stderr(log)
+        .spawn()
+        .expect("Server should start");
+    let mut server = TestServer {
+        child,
+        port,
+        entrypoint: "tests/fixtures/error.php".to_string(),
+    };
+    server.wait_for_ready(Duration::from_secs(5)).unwrap();
     let fatal = send_http_request(server.port, "GET", "/error?mode=user_error", &[], None)
         .expect("Fatal PHP request should be converted to an HTTP response");
     assert_eq!(fatal.status_code, 500);
+    assert_eq!(fatal.text(), "Internal Server Error");
+
+    let hidden = send_http_request(
+        server.port,
+        "GET",
+        "/error?mode=hidden_exception",
+        &[],
+        None,
+    )
+    .expect("Hidden fatal must produce an HTTP response");
+    assert_eq!(hidden.status_code, 500);
+    assert_eq!(hidden.text(), "Internal Server Error");
 
     let recovery = send_http_request(server.port, "GET", "/error?mode=ok", &[], None)
         .expect("Worker must survive a PHP fatal");
     assert_eq!(recovery.status_code, 200);
     assert_eq!(recovery.json().unwrap()["status"], "ok");
+
+    drop(server);
+    let logs = std::fs::read_to_string(&log_path).unwrap();
+    std::fs::remove_file(&log_path).unwrap();
+    assert!(logs.contains("Fatal test error"));
+    assert!(logs.contains("Hidden bootstrap failure"));
+    assert!(logs.contains("Stack trace:"));
+    assert!(logs.contains("http_status=500"));
+}
+
+#[test]
+fn test_php_loads_ini_and_scanned_configuration() {
+    let directory = std::env::temp_dir().join(format!(
+        "restphp-ini-{}-{}",
+        std::process::id(),
+        get_ephemeral_port()
+    ));
+    let scan_directory = directory.join("conf.d");
+    std::fs::create_dir_all(&scan_directory).unwrap();
+    let ini = directory.join("php.ini");
+    std::fs::write(&ini, "precision=12\nserialize_precision=13\n").unwrap();
+    std::fs::write(
+        scan_directory.join("99-restphp.ini"),
+        "serialize_precision=14\n",
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_restphp"))
+        .env("PHPRC", &ini)
+        .env("PHP_INI_SCAN_DIR", &scan_directory)
+        .args([
+            "-e",
+            "echo json_encode([ini_get('precision'), ini_get('serialize_precision'), php_ini_loaded_file()]);",
+        ])
+        .output()
+        .expect("RestPHP should evaluate using the supplied PHP configuration");
+    std::fs::remove_dir_all(&directory).unwrap();
+    assert!(output.status.success(), "{:?}", output);
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let result: serde_json::Value =
+        serde_json::from_str(stdout.lines().find(|line| line.starts_with('[')).unwrap()).unwrap();
+    assert_eq!(result[0], "12");
+    assert_eq!(result[1], "14");
+    assert_eq!(result[2], ini.to_string_lossy().as_ref());
 }

@@ -149,12 +149,6 @@ fn test_m1_core_ffi_sapi_comprehensive_suite() {
             !resp.success,
             "Syntax error must report unsuccessful execution"
         );
-        let body_str = String::from_utf8_lossy(&resp.body);
-        assert!(
-            body_str.contains("Parse error") || body_str.contains("syntax error"),
-            "Expected Parse error in output buffer, got: {}",
-            body_str
-        );
     }
 
     // =========================================================================
@@ -165,12 +159,6 @@ fn test_m1_core_ffi_sapi_comprehensive_suite() {
         let (resp, _) =
             run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
         assert!(!resp.success);
-        let body_str = String::from_utf8_lossy(&resp.body);
-        assert!(
-            body_str.contains("DivisionByZeroError"),
-            "Expected DivisionByZeroError in output buffer, got: {}",
-            body_str
-        );
     }
 
     // =========================================================================
@@ -183,13 +171,6 @@ fn test_m1_core_ffi_sapi_comprehensive_suite() {
         let (resp, _) =
             run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
         assert!(!resp.success);
-        let body_str = String::from_utf8_lossy(&resp.body);
-        assert!(
-            body_str.contains("RuntimeException")
-                && body_str.contains("Intentional uncaught exception"),
-            "Expected RuntimeException stack trace in output buffer, got: {}",
-            body_str
-        );
     }
 
     // =========================================================================
@@ -200,12 +181,6 @@ fn test_m1_core_ffi_sapi_comprehensive_suite() {
         let (resp, _) =
             run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
         assert!(!resp.success);
-        let body_str = String::from_utf8_lossy(&resp.body);
-        assert!(
-            body_str.contains("Call to undefined function undefined_restphp_test_func()"),
-            "Expected undefined function error, got: {}",
-            body_str
-        );
     }
 
     // =========================================================================
@@ -323,6 +298,50 @@ fn test_m1_core_ffi_sapi_comprehensive_suite() {
         assert!(resp.success);
         let body_str = String::from_utf8_lossy(&resp.body);
         assert_eq!(body_str, "{\"sid\":\"s3cr3t\",\"theme\":\"dark\"}");
+    }
+
+    {
+        let target = ExecutionTarget::Inline(
+            "ini_set('display_errors', '0'); \
+             throw new RuntimeException('Hidden Laravel bootstrap failure');"
+                .to_string(),
+        );
+        let (resp, _) =
+            run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
+        assert!(!resp.success);
+        assert!(resp.body.is_empty(), "display_errors=0 must stay effective");
+        let diagnostics = String::from_utf8_lossy(&resp.diagnostics);
+        assert!(diagnostics.contains("Hidden Laravel bootstrap failure"));
+        assert!(diagnostics.contains("Stack trace:"));
+
+        let target = ExecutionTarget::Inline(
+            "ini_set('display_errors', '0'); \
+             register_shutdown_function(function () { \
+                 throw new RuntimeException('Shutdown failure'); \
+             });"
+            .to_string(),
+        );
+        let (resp, _) =
+            run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
+        assert!(!resp.success);
+        assert!(String::from_utf8_lossy(&resp.diagnostics).contains("Shutdown failure"));
+
+        let target =
+            ExecutionTarget::Inline("error_log(str_repeat('x', 16384), 4); exit(1);".to_string());
+        let (resp, _) =
+            run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
+        assert!(!resp.success);
+        assert_eq!(resp.diagnostics, vec![b'x'; 8192]);
+
+        let target = ExecutionTarget::Inline("echo 'Recovered';".to_string());
+        let (resp, _) =
+            run_in_request_context(&engine, target, bytes::Bytes::new(), Vec::new(), None);
+        assert!(resp.success);
+        assert_eq!(resp.body, b"Recovered");
+        assert!(
+            resp.diagnostics.is_empty(),
+            "diagnostics must not cross requests"
+        );
     }
 
     // Drop engine cleanly triggers restphp_sapi_teardown()

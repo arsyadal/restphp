@@ -99,6 +99,12 @@ static sapi_post_entry restphp_post_entries[] = {
     { NULL, 0, NULL, NULL }
 };
 
+static void restphp_ini_defaults(HashTable *configuration_hash) {
+    zval value;
+    ZVAL_NEW_STR(&value, zend_string_init(ZEND_STRL("1"), 1));
+    zend_hash_str_update(configuration_hash, ZEND_STRL("log_errors"), &value);
+}
+
 /*
  * Dedicated SAPI Module Struct (280 bytes on x86_64)
  */
@@ -127,14 +133,14 @@ static sapi_module_struct restphp_sapi_module = {
     php_default_post_reader,               /* default_post_reader */
     php_default_treat_data,                /* treat_data */
     NULL,                                  /* executable_location */
-    1,                                     /* php_ini_ignore */
+    0,                                     /* php_ini_ignore */
     1,                                     /* php_ini_ignore_cwd */
     NULL,                                  /* get_fd */
     NULL,                                  /* force_http_10 */
     NULL,                                  /* get_target_uid */
     NULL,                                  /* get_target_gid */
     NULL,                                  /* input_filter */
-    NULL,                                  /* ini_defaults */
+    restphp_ini_defaults,                  /* ini_defaults */
     1,                                     /* phpinfo_as_text */
     NULL,                                  /* ini_entries */
     NULL,                                  /* additional_functions */
@@ -148,7 +154,7 @@ static sapi_module_struct restphp_sapi_module = {
 int restphp_sapi_init(void) {
     signal(SIGPIPE, SIG_IGN);
     zend_signal_startup();
-    restphp_sapi_module.php_ini_ignore = 1;
+    restphp_sapi_module.php_ini_ignore = 0;
     restphp_sapi_module.php_ini_ignore_cwd = 1;
     sapi_startup(&restphp_sapi_module);
     sapi_register_post_entries(restphp_post_entries);
@@ -231,6 +237,8 @@ int restphp_request_shutdown_safe(void) {
     zend_first_try {
         zend_gc_collect_cycles();
         php_request_shutdown(NULL);
+        /* PHP catches shutdown-handler bailouts internally; retain their exit status. */
+        status = EG(exit_status);
     } zend_catch {
         status = EG(exit_status) ? EG(exit_status) : -1;
     } zend_end_try();

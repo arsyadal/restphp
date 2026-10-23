@@ -3,6 +3,9 @@
 use bytes::Bytes;
 use std::ffi::CString;
 
+/// Maximum retained SAPI diagnostic bytes per request.
+pub const MAX_DIAGNOSTIC_BYTES: usize = 8 * 1024;
+
 /// Execution context for an active PHP request.
 ///
 /// Pinned to the worker thread's stack or owned allocation during request execution,
@@ -19,6 +22,8 @@ pub struct WorkerRequestContext {
     pub response_headers: Vec<(String, String)>,
     /// Accumulated unbuffered script output captured via `ub_write`
     pub output_buffer: Vec<u8>,
+    /// Bounded SAPI log messages, separate from output controlled by display_errors.
+    pub diagnostics: Vec<u8>,
     /// CGI environment variables and `HTTP_*` request headers for `$_SERVER`
     pub server_vars: Vec<(String, String)>,
     /// Raw HTTP `Cookie` header string for Zend's automatic cookie parser (`$_COOKIE`)
@@ -34,6 +39,7 @@ impl WorkerRequestContext {
             status_code: 200,
             response_headers: Vec::new(),
             output_buffer: Vec::with_capacity(4096),
+            diagnostics: Vec::new(),
             server_vars,
             raw_cookie: None,
         }

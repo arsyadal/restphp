@@ -4,7 +4,7 @@
 //! worker pool only receive already-admitted request jobs and return a small,
 //! validated response representation.
 
-use crate::sapi::ExecutionTarget;
+use crate::sapi::{ExecutionTarget, MAX_DIAGNOSTIC_BYTES};
 use crate::worker::{DispatchError, WorkerHandle};
 use axum::{
     body::Bytes,
@@ -264,9 +264,14 @@ async fn dispatch_php_request(
             response.body,
         ),
         Ok(response) => {
+            let output_len = response.body.len().min(MAX_DIAGNOSTIC_BYTES);
             tracing::error!(
-                status = response.status,
-                "PHP request failed; returning an opaque internal-server-error response"
+                php_status = response.status,
+                http_status = StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                diagnostics = ?String::from_utf8_lossy(&response.diagnostics),
+                output = ?String::from_utf8_lossy(&response.body[..output_len]),
+                output_truncated = response.body.len() > output_len,
+                "PHP request failed"
             );
             internal_server_error()
         }

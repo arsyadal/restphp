@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Load PHP configuration and scanned extension settings instead of disabling them, allowing standard Laravel applications to boot with their configured extensions.
+- Retain bounded per-request SAPI diagnostics and log failed output with distinct PHP and HTTP status fields, while preserving generic HTTP 500 responses.
+- Preserve PHP shutdown-handler failure status so fatal errors during request teardown also produce a generic HTTP 500.
 - Dependabot automation no longer requests an Actions-generated approval and skips auto-merge cleanly when the repository setting is disabled.
 
 ## [0.1.0] - 2026-09-05
