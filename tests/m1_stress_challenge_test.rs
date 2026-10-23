@@ -195,6 +195,10 @@ fn test_m1_stress_and_edge_cases() {
     println!("--- [CHALLENGE 2A] Recursion Stress (depth 500) ---");
     {
         let code = "
+            // This test requires 500 frames even when PHP loads Xdebug's lower default limit.
+            if (extension_loaded('xdebug')) {
+                ini_set('xdebug.max_nesting_level', '1024');
+            }
             function recurse_depth($n) {
                 if ($n <= 0) return 0;
                 return 1 + recurse_depth($n - 1);
@@ -211,7 +215,11 @@ fn test_m1_stress_and_edge_cases() {
             None,
         );
         assert_eq!(resp.status, 200);
-        assert!(resp.success);
+        assert!(
+            resp.success,
+            "Recursion failed: {}",
+            String::from_utf8_lossy(&resp.diagnostics)
+        );
         assert_eq!(String::from_utf8_lossy(&resp.body), "500");
     }
 
