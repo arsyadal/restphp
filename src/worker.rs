@@ -448,6 +448,7 @@ fn worker_error_response(id: usize, err: String) -> PhpResponse {
         content_type: "text/plain".to_string(),
         headers: Vec::new(),
         body: format!("Worker-{id} error: {err}").into_bytes(),
+        diagnostics: Vec::new(),
         success: false,
     }
 }

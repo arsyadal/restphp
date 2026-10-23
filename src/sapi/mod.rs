@@ -29,6 +29,8 @@ pub struct PhpResponse {
     pub content_type: String,
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
+    /// Bounded PHP diagnostics for server-side failure reporting, never HTTP output.
+    pub diagnostics: Vec<u8>,
     pub success: bool,
 }
 
@@ -176,6 +178,7 @@ impl PhpEngine {
                 content_type: ct,
                 headers: ctx.response_headers.clone(),
                 body: ctx.output_buffer.clone(),
+                diagnostics: std::mem::take(&mut ctx.diagnostics),
                 success: exit_status == 0 && shutdown_status == 0,
             })
         }
@@ -198,6 +201,7 @@ impl PhpEngine {
                 content_type: "text/plain".to_string(),
                 headers: Vec::new(),
                 body: err.into_bytes(),
+                diagnostics: Vec::new(),
                 success: false,
             })
     }
@@ -220,6 +224,7 @@ impl PhpEngine {
                 content_type: "text/plain".to_string(),
                 headers: Vec::new(),
                 body: err.into_bytes(),
+                diagnostics: Vec::new(),
                 success: false,
             })
     }

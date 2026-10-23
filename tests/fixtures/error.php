@@ -12,6 +12,9 @@ if ($mode === 'notice') {
 } elseif ($mode === 'user_error') {
     trigger_error("Fatal test error", E_USER_ERROR);
     echo json_encode(["status" => "should_not_reach"]);
+} elseif ($mode === 'hidden_exception') {
+    ini_set('display_errors', '0');
+    throw new RuntimeException("Hidden bootstrap failure");
 } else {
     echo json_encode(["status" => "ok", "mode" => $mode]);
 }

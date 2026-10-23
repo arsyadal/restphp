@@ -7,7 +7,7 @@ use crate::ffi::{
     php_register_variable_safe, sapi_globals, zval, SapiHeader, SapiHeaders,
     SAPI_HEADER_SENT_SUCCESSFULLY,
 };
-use crate::sapi::context::WorkerRequestContext;
+use crate::sapi::context::{WorkerRequestContext, MAX_DIAGNOSTIC_BYTES};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
 
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn restphp_rs_ub_write(str: *const c_char, str_length: usi
         return 0;
     }
 
-    let slice = std::slice::from_raw_parts(str as *const u8, str_length);
+    let slice = std::slice::from_raw_parts(str.cast::<u8>(), str_length);
     (*ctx_ptr).output_buffer.extend_from_slice(slice);
     str_length
 }
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn restphp_rs_read_post(buffer: *mut c_char, count_bytes: 
     let to_copy = remaining.min(count_bytes);
     std::ptr::copy_nonoverlapping(
         ctx.post_body.as_ptr().add(ctx.post_offset),
-        buffer as *mut u8,
+        buffer.cast::<u8>(),
         to_copy,
     );
     ctx.post_offset += to_copy;
@@ -170,11 +170,28 @@ pub unsafe extern "C" fn restphp_rs_log_message(message: *const c_char, syslog_t
         return;
     }
 
-    let msg = CStr::from_ptr(message).to_string_lossy();
+    let message = CStr::from_ptr(message);
+    let ctx_ptr = sapi_globals.server_context as *mut WorkerRequestContext;
+    if !ctx_ptr.is_null() {
+        let diagnostics = &mut (*ctx_ptr).diagnostics;
+        let remaining = MAX_DIAGNOSTIC_BYTES.saturating_sub(diagnostics.len());
+        if remaining > 0 {
+            if !diagnostics.is_empty() {
+                diagnostics.push(b'\n');
+            }
+            let remaining = MAX_DIAGNOSTIC_BYTES - diagnostics.len();
+            let bytes = message.to_bytes();
+            diagnostics.extend_from_slice(&bytes[..bytes.len().min(remaining)]);
+        }
+    }
+
+    let msg = message.to_string_lossy();
     match syslog_type_int {
-        1 | 2 => tracing::error!(target: "php", "{}", msg),
-        3 | 4 => tracing::warn!(target: "php", "{}", msg),
+        0..=3 => tracing::error!(target: "php", "{}", msg),
+        4 => tracing::warn!(target: "php", "{}", msg),
         5 | 6 => tracing::info!(target: "php", "{}", msg),
-        _ => tracing::debug!(target: "php", "[type={}] {}", syslog_type_int, msg),
+        7 => tracing::debug!(target: "php", "{}", msg),
+        // PHP uses -1 when no syslog severity is supplied, including fatal errors.
+        _ => tracing::error!(target: "php", "{}", msg),
     }
 }

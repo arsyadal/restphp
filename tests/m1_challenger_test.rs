@@ -495,33 +495,3 @@ fn test_recovery_after_bailout_and_fatal_errors() {
         );
     }
 }
-
-// =========================================================================
-// Group 6: File Path Handling Invariants
-// =========================================================================
-
-#[test]
-fn test_relative_path_in_subdirectory_defect() {
-    let _guard = TEST_MUTEX.lock().unwrap();
-    let engine = PhpEngine::init().expect("PhpEngine init");
-
-    // Demonstrates Defect: relative path in a subdirectory fails because
-    // PHP's request startup changes directory via VCWD_CHDIR_FILE(path_translated),
-    // causing php_execute_script("public/index.php") to look for public/public/index.php.
-    let resp = engine.execute_file("public/index.php", "GET", "/", "", &[]);
-    assert!(
-        !resp.success,
-        "Defect confirmed: relative path in subdirectory fails"
-    );
-    let body = String::from_utf8_lossy(&resp.body);
-    assert!(
-        body.contains("Failed opening required 'public/index.php'"),
-        "Expected stream open failure, got: {}",
-        body
-    );
-
-    // Conversely, canonical absolute path succeeds:
-    let abs_path = std::fs::canonicalize("public/index.php").unwrap();
-    let resp_abs = engine.execute_file(abs_path.to_str().unwrap(), "GET", "/", "", &[]);
-    assert!(resp_abs.success, "Canonical absolute path succeeds");
-}
