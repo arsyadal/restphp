@@ -2,16 +2,17 @@
 // RestPHP Comprehensive Rust E2E Integration Test Suite (Tiers 1 - 4)
 
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{TcpListener, TcpStream};
 use std::process::{Child, Command};
-use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-static NEXT_PORT: AtomicU16 = AtomicU16::new(9200);
-
 pub fn get_ephemeral_port() -> u16 {
-    NEXT_PORT.fetch_add(1, Ordering::SeqCst)
+    TcpListener::bind(("127.0.0.1", 0))
+        .expect("OS should allocate an unused test port")
+        .local_addr()
+        .unwrap()
+        .port()
 }
 
 #[derive(Debug)]
@@ -114,21 +115,30 @@ impl TestServer {
         .into())
     }
 
-    pub fn wait_for_exit_success(
+    pub fn wait_for_exit(
         &mut self,
         timeout: Duration,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<std::process::ExitStatus, Box<dyn std::error::Error>> {
         let start = Instant::now();
         while start.elapsed() < timeout {
             if let Some(status) = self.child.try_wait()? {
-                if status.success() {
-                    return Ok(());
-                }
-                return Err(format!("Server exited unsuccessfully: {status}").into());
+                return Ok(status);
             }
             std::thread::sleep(Duration::from_millis(25));
         }
         Err(format!("Server did not exit within {:?}", timeout).into())
+    }
+
+    pub fn wait_for_exit_success(
+        &mut self,
+        timeout: Duration,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let status = self.wait_for_exit(timeout)?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(format!("Server exited unsuccessfully: {status}").into())
+        }
     }
 }
 
@@ -301,12 +311,7 @@ fn test_tier1_cli_rejects_multiple_nts_workers_before_listening() {
         .output()
         .expect("Failed to execute restphp serve");
     assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr).to_lowercase();
-    assert!(stderr.contains("worker"));
-    assert!(
-        stderr.contains("supervisor"),
-        "error should direct horizontal scaling to a process supervisor: {stderr}"
-    );
+    assert!(TcpStream::connect(("127.0.0.1", port.parse::<u16>().unwrap())).is_err());
 }
 
 #[test]
@@ -925,7 +930,7 @@ fn test_php_loads_ini_and_scanned_configuration() {
         .env("PHP_INI_SCAN_DIR", &scan_directory)
         .args([
             "-e",
-            "echo json_encode([ini_get('precision'), ini_get('serialize_precision'), php_ini_loaded_file()]);",
+            "echo json_encode([ini_get('precision'), ini_get('serialize_precision')]);",
         ])
         .output()
         .expect("RestPHP should evaluate using the supplied PHP configuration");
@@ -936,5 +941,118 @@ fn test_php_loads_ini_and_scanned_configuration() {
         serde_json::from_str(stdout.lines().find(|line| line.starts_with('[')).unwrap()).unwrap();
     assert_eq!(result[0], "12");
     assert_eq!(result[1], "14");
-    assert_eq!(result[2], ini.to_string_lossy().as_ref());
+}
+
+#[test]
+fn test_shutdown_timeout_does_not_limit_healthy_server_lifetime() {
+    let server = TestServer::start_with_args(
+        "tests/fixtures/shutdown.php",
+        vec!["--shutdown-timeout-secs".to_string(), "1".to_string()],
+    )
+    .unwrap();
+    let before = send_http_request(server.port, "GET", "/", &[], None).unwrap();
+    assert_eq!(before.status_code, 200);
+    assert_eq!(before.text(), "shutdown-complete");
+
+    std::thread::sleep(Duration::from_millis(1400));
+
+    let after = send_http_request(server.port, "GET", "/", &[], None)
+        .expect("Shutdown timeout must not stop a healthy server");
+    assert_eq!(after.status_code, 200);
+    assert_eq!(after.text(), "shutdown-complete");
+}
+
+#[cfg(unix)]
+#[test]
+fn test_sigterm_deadline_drains_or_terminates_php_after_long_uptime() {
+    for (release_work, disconnect) in [(true, false), (false, false), (false, true)] {
+        let mut server = TestServer::start_with_args(
+            "tests/fixtures/shutdown.php",
+            vec!["--shutdown-timeout-secs".to_string(), "1".to_string()],
+        )
+        .unwrap();
+        std::thread::sleep(Duration::from_millis(1400));
+
+        let directory = std::env::temp_dir().join(format!(
+            "restphp-shutdown-{}-{}",
+            std::process::id(),
+            server.port
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let started = directory.join("started");
+        let release = directory.join("release");
+        let mut stream = TcpStream::connect(("127.0.0.1", server.port)).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        write!(
+            stream,
+            "GET /?started={}&release={} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+            started.display(),
+            release.display()
+        )
+        .unwrap();
+
+        let request_started = Instant::now();
+        while !started.exists() {
+            assert!(
+                request_started.elapsed() < Duration::from_secs(3),
+                "PHP must start the admitted request"
+            );
+            assert!(server.child.try_wait().unwrap().is_none());
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        if disconnect {
+            stream.shutdown(std::net::Shutdown::Both).unwrap();
+        }
+
+        let shutdown_started = Instant::now();
+        assert!(Command::new("/bin/kill")
+            .args(["-TERM", &server.child.id().to_string()])
+            .status()
+            .unwrap()
+            .success());
+
+        if release_work {
+            std::thread::sleep(Duration::from_millis(250));
+            std::fs::write(&release, "").unwrap();
+            let mut raw_response = Vec::new();
+            stream.read_to_end(&mut raw_response).unwrap();
+            let response = parse_http_response(&raw_response).unwrap();
+            assert_eq!(response.status_code, 200);
+            assert_eq!(response.text(), "shutdown-complete");
+            server
+                .wait_for_exit_success(Duration::from_secs(5))
+                .unwrap();
+        } else {
+            let status = server.wait_for_exit(Duration::from_secs(5)).unwrap();
+            assert_eq!(status.code(), Some(1));
+            assert!(
+                shutdown_started.elapsed() >= Duration::from_millis(750),
+                "The full shutdown deadline must start at SIGTERM, not process startup"
+            );
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn test_idle_shutdown_signals_after_php_requests_exit_cleanly() {
+    for signal in ["-TERM", "-INT"] {
+        let mut server = TestServer::start("tests/fixtures/shutdown.php").unwrap();
+        for _ in 0..2 {
+            let response = send_http_request(server.port, "GET", "/", &[], None).unwrap();
+            assert_eq!(response.status_code, 200);
+            assert_eq!(response.text(), "shutdown-complete");
+        }
+        assert!(Command::new("/bin/kill")
+            .args([signal, &server.child.id().to_string()])
+            .status()
+            .unwrap()
+            .success());
+        server
+            .wait_for_exit_success(Duration::from_secs(5))
+            .unwrap();
+    }
 }

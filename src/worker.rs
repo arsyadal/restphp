@@ -8,7 +8,10 @@ pub use crate::sapi::ExecutionTarget;
 use crate::sapi::{PhpEngine, PhpResponse, WorkerRequestContext};
 use bytes::Bytes;
 use crossbeam_channel::{bounded, Sender, TrySendError};
+use std::ffi::CString;
 use std::fmt;
+use std::os::raw::{c_int, c_void};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -24,6 +27,8 @@ pub struct WorkerJob {
     pub headers: Vec<(String, String)>,
     pub cookie: Option<String>,
     pub content_type: Option<String>,
+    pub is_https: bool,
+    pub server_port: u16,
     pub respond_to: oneshot::Sender<PhpResponse>,
 }
 
@@ -109,6 +114,28 @@ impl WorkerHandle {
         max_requests: u64,
         max_queue: usize,
     ) -> Result<Self, String> {
+        Self::start(num_workers, max_requests, max_queue, None)
+    }
+
+    /// Boots a script once and waits until it enters `restphp_handle_request`.
+    /// Recycling ends this VM; a supervisor must start a replacement process.
+    pub fn new_persistent(
+        script: PathBuf,
+        max_requests: u64,
+        max_queue: usize,
+    ) -> Result<Self, String> {
+        let script = script
+            .canonicalize()
+            .map_err(|e| format!("Invalid worker script: {e}"))?;
+        Self::start(1, max_requests, max_queue, Some(script))
+    }
+
+    fn start(
+        num_workers: usize,
+        max_requests: u64,
+        max_queue: usize,
+        persistent_script: Option<PathBuf>,
+    ) -> Result<Self, String> {
         if num_workers != 1 {
             return Err(
                 "RestPHP currently supports exactly one PHP worker per process because the embedded PHP build is NTS; use a process supervisor or container replicas for horizontal scaling."
@@ -130,15 +157,27 @@ impl WorkerHandle {
             .name("restphp-worker-0".to_string())
             .spawn(move || match init_engine(0) {
                 Ok(engine) => {
-                    let _ = ready_tx.send(Ok(()));
-                    worker_loop(
-                        0,
-                        receiver,
-                        engine,
-                        max_requests,
-                        worker_draining,
-                        worker_drain_notify,
-                    );
+                    if let Some(script) = persistent_script {
+                        persistent_worker_loop(
+                            receiver,
+                            engine,
+                            script,
+                            ready_tx,
+                            max_requests,
+                            worker_draining,
+                            worker_drain_notify,
+                        );
+                    } else {
+                        let _ = ready_tx.send(Ok(()));
+                        worker_loop(
+                            0,
+                            receiver,
+                            engine,
+                            max_requests,
+                            worker_draining,
+                            worker_drain_notify,
+                        );
+                    }
                 }
                 Err(err) => {
                     let _ = ready_tx.send(Err(err));
@@ -244,6 +283,36 @@ impl WorkerHandle {
         cookie: Option<String>,
         content_type: Option<String>,
     ) -> Result<PhpResponse, DispatchError> {
+        self.dispatch_with_transport(
+            target,
+            method,
+            uri,
+            query,
+            body,
+            headers,
+            cookie,
+            content_type,
+            false,
+            80,
+        )
+        .await
+    }
+
+    /// Dispatches with trusted listener metadata, never client forwarding headers.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn dispatch_with_transport(
+        &self,
+        target: ExecutionTarget,
+        method: String,
+        uri: String,
+        query: String,
+        body: Vec<u8>,
+        headers: Vec<(String, String)>,
+        cookie: Option<String>,
+        content_type: Option<String>,
+        is_https: bool,
+        server_port: u16,
+    ) -> Result<PhpResponse, DispatchError> {
         let (respond_to, response) = oneshot::channel();
         let job = WorkerJob {
             target,
@@ -254,6 +323,8 @@ impl WorkerHandle {
             headers,
             cookie,
             content_type,
+            is_https,
+            server_port,
             respond_to,
         };
 
@@ -370,14 +441,7 @@ fn worker_loop(
         }
 
         TOTAL_REQUESTS.fetch_add(1, Ordering::Relaxed);
-        let server_vars = build_server_vars(
-            &job.method,
-            &job.uri,
-            &job.query,
-            &job.headers,
-            &job.content_type,
-            job.body.len(),
-        );
+        let server_vars = build_server_vars(&job);
         let mut ctx = WorkerRequestContext::new(Bytes::copy_from_slice(&job.body), server_vars);
         if let Some(ref cookie) = job.cookie {
             ctx = ctx.with_cookie(cookie);
@@ -391,6 +455,8 @@ fn worker_loop(
 
     tracing::info!("🛑 [Worker-{id}] Shutting down after {settled_requests} settled jobs.");
     // PhpEngine::drop() tears down the PHP module after every accepted job has drained.
+    draining.store(true, Ordering::Release);
+    let _ = drain_notify.send(true);
 }
 
 fn notify_process_drain(
@@ -461,14 +527,19 @@ fn init_engine(id: usize) -> Result<PhpEngine, String> {
 }
 
 /// Builds `$_SERVER` CGI variables from HTTP request metadata.
-fn build_server_vars(
-    method: &str,
-    uri: &str,
-    query: &str,
-    headers: &[(String, String)],
-    content_type: &Option<String>,
-    content_length: usize,
-) -> Vec<(String, String)> {
+fn build_server_vars(job: &WorkerJob) -> Vec<(String, String)> {
+    let WorkerJob {
+        method,
+        uri,
+        query,
+        headers,
+        content_type,
+        body,
+        is_https,
+        server_port,
+        ..
+    } = job;
+    let content_length = body.len();
     let mut vars = Vec::with_capacity(headers.len() + 16);
     let request_uri = if query.is_empty() || uri.contains('?') {
         uri.to_string()
@@ -483,7 +554,15 @@ fn build_server_vars(
     vars.push(("SERVER_PROTOCOL".to_string(), "HTTP/1.1".to_string()));
     vars.push(("GATEWAY_INTERFACE".to_string(), "CGI/1.1".to_string()));
     vars.push(("SERVER_NAME".to_string(), "restphp".to_string()));
-    vars.push(("SERVER_PORT".to_string(), "80".to_string()));
+    vars.push(("SERVER_PORT".to_string(), server_port.to_string()));
+    vars.push((
+        "HTTPS".to_string(),
+        if *is_https { "on" } else { "off" }.to_string(),
+    ));
+    vars.push((
+        "REQUEST_SCHEME".to_string(),
+        if *is_https { "https" } else { "http" }.to_string(),
+    ));
     vars.push(("CONTENT_LENGTH".to_string(), content_length.to_string()));
 
     if let Some(ct) = content_type {
@@ -500,4 +579,257 @@ fn build_server_vars(
     }
 
     vars
+}
+
+struct ActivePersistentRequest {
+    job: WorkerJob,
+    context: WorkerRequestContext,
+    method: CString,
+    uri: CString,
+    query: CString,
+    content_type: Option<CString>,
+    script: CString,
+}
+
+impl ActivePersistentRequest {
+    fn new(
+        mut job: WorkerJob,
+        script: &std::path::Path,
+    ) -> Result<Box<Self>, (oneshot::Sender<PhpResponse>, String)> {
+        let metadata = (|| -> Result<_, std::ffi::NulError> {
+            Ok((
+                CString::new(job.method.as_str())?,
+                CString::new(job.uri.as_str())?,
+                CString::new(job.query.as_str())?,
+                job.content_type.as_deref().map(CString::new).transpose()?,
+                CString::new(script.to_string_lossy().as_bytes())?,
+            ))
+        })();
+        let (method, uri, query, content_type, script) = match metadata {
+            Ok(metadata) => metadata,
+            Err(error) => return Err((job.respond_to, error.to_string())),
+        };
+        let mut variables = build_server_vars(&job);
+        variables.push((
+            "SCRIPT_FILENAME".to_string(),
+            script.to_string_lossy().into_owned(),
+        ));
+        let mut context =
+            WorkerRequestContext::new(Bytes::from(std::mem::take(&mut job.body)), variables);
+        if let Some(cookie) = job.cookie.as_deref() {
+            context = context.with_cookie(cookie);
+        }
+        Ok(Box::new(Self {
+            job,
+            context,
+            method,
+            uri,
+            query,
+            content_type,
+            script,
+        }))
+    }
+
+    unsafe fn install(&mut self) {
+        crate::ffi::restphp_set_request_info(
+            (&mut self.context as *mut WorkerRequestContext).cast(),
+            self.method.as_ptr(),
+            self.uri.as_ptr().cast_mut(),
+            self.query.as_ptr().cast_mut(),
+            self.content_type
+                .as_ref()
+                .map_or(std::ptr::null(), |value| value.as_ptr()),
+            self.context.post_body.len() as i64,
+            self.script.as_ptr().cast_mut(),
+        );
+        crate::ffi::restphp_set_cookie_data(
+            self.context
+                .raw_cookie
+                .as_ref()
+                .map_or(std::ptr::null_mut(), |value| value.as_ptr().cast_mut()),
+        );
+    }
+}
+
+struct PersistentBridge {
+    receiver: crossbeam_channel::Receiver<WorkerCommand>,
+    ready: Option<Sender<Result<(), String>>>,
+    active: Option<Box<ActivePersistentRequest>>,
+    script: PathBuf,
+    settled: u64,
+    max_requests: u64,
+    draining: Arc<AtomicBool>,
+    drain_notify: watch::Sender<bool>,
+    failed: bool,
+}
+
+impl PersistentBridge {
+    fn next(&mut self) -> bool {
+        if self.failed || (self.max_requests > 0 && self.settled >= self.max_requests) {
+            return false;
+        }
+        if let Some(ready) = self.ready.take() {
+            let _ = ready.send(Ok(()));
+        }
+        loop {
+            let job = match self.receiver.recv() {
+                Ok(WorkerCommand::Job(job)) => *job,
+                Ok(WorkerCommand::Shutdown) | Err(_) => return false,
+            };
+            if job.respond_to.is_closed() {
+                self.settled += 1;
+                notify_process_drain(
+                    self.settled,
+                    self.max_requests,
+                    &self.draining,
+                    &self.drain_notify,
+                );
+                if self.max_requests > 0 && self.settled >= self.max_requests {
+                    return false;
+                }
+                continue;
+            }
+            match ActivePersistentRequest::new(job, &self.script) {
+                Ok(mut active) => {
+                    TOTAL_REQUESTS.fetch_add(1, Ordering::Relaxed);
+                    unsafe {
+                        active.install();
+                    }
+                    self.active = Some(active);
+                    return true;
+                }
+                Err((respond_to, error)) => {
+                    let _ = respond_to.send(worker_error_response(0, error));
+                    self.settled += 1;
+                    notify_process_drain(
+                        self.settled,
+                        self.max_requests,
+                        &self.draining,
+                        &self.drain_notify,
+                    );
+                    if self.max_requests > 0 && self.settled >= self.max_requests {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    fn finish(&mut self, success: bool) {
+        if let Some(active) = self.active.take() {
+            let ActivePersistentRequest {
+                job, mut context, ..
+            } = *active;
+            let response = if success {
+                PhpResponse {
+                    status: context.status_code,
+                    content_type: context
+                        .content_type()
+                        .unwrap_or("text/html; charset=UTF-8")
+                        .to_string(),
+                    headers: std::mem::take(&mut context.response_headers),
+                    body: std::mem::take(&mut context.output_buffer),
+                    diagnostics: std::mem::take(&mut context.diagnostics),
+                    success: true,
+                }
+            } else {
+                let mut response = worker_error_response(
+                    0,
+                    "Persistent PHP callback failed; worker is stopping".to_string(),
+                );
+                response.diagnostics = std::mem::take(&mut context.diagnostics);
+                response
+            };
+            let _ = job.respond_to.send(response);
+            self.settled += 1;
+            notify_process_drain(
+                self.settled,
+                self.max_requests,
+                &self.draining,
+                &self.drain_notify,
+            );
+        }
+        self.failed |= !success;
+    }
+}
+
+/// # Safety
+/// C calls this only with the live worker-thread bridge, without entering Zend.
+#[no_mangle]
+pub unsafe extern "C" fn restphp_rs_worker_next(bridge: *mut c_void) -> c_int {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        i32::from((&mut *bridge.cast::<PersistentBridge>()).next())
+    }))
+    .unwrap_or(0)
+}
+
+/// # Safety
+/// C has detached all request pointers before completing the live bridge's job.
+#[no_mangle]
+pub unsafe extern "C" fn restphp_rs_worker_finish(bridge: *mut c_void, success: c_int) {
+    let bridge = &mut *bridge.cast::<PersistentBridge>();
+    if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bridge.finish(success != 0)))
+        .is_err()
+    {
+        bridge.failed = true;
+    }
+}
+
+fn persistent_worker_loop(
+    receiver: crossbeam_channel::Receiver<WorkerCommand>,
+    engine: PhpEngine,
+    script: PathBuf,
+    ready: Sender<Result<(), String>>,
+    max_requests: u64,
+    draining: Arc<AtomicBool>,
+    drain_notify: watch::Sender<bool>,
+) {
+    let mut bridge = PersistentBridge {
+        receiver,
+        ready: Some(ready),
+        active: None,
+        script: script.clone(),
+        settled: 0,
+        max_requests,
+        draining,
+        drain_notify,
+        failed: false,
+    };
+    let mut bootstrap = WorkerRequestContext::new(Bytes::new(), Vec::new());
+    unsafe {
+        crate::ffi::restphp_set_worker_bridge((&mut bridge as *mut PersistentBridge).cast());
+    }
+    let result = engine.execute_request(
+        &mut bootstrap,
+        &ExecutionTarget::File(script.clone()),
+        "GET",
+        "/",
+        "",
+        None,
+        Some(&script),
+    );
+    unsafe {
+        crate::ffi::restphp_set_worker_bridge(std::ptr::null_mut());
+        crate::ffi::restphp_clear_request_info();
+    }
+    if let Some(ready) = bridge.ready.take() {
+        let _ = ready.send(Err(format!(
+            "Persistent bootstrap exited before entering restphp_handle_request: {}",
+            match result {
+                Ok(response) => String::from_utf8_lossy(&response.diagnostics).into_owned(),
+                Err(error) => error,
+            },
+        )));
+    }
+    bridge.finish(false);
+    bridge.draining.store(true, Ordering::Release);
+    let _ = bridge.drain_notify.send(true);
+    // Settle accepted jobs even when fatal PHP errors terminate the callback loop.
+    for command in bridge.receiver.try_iter() {
+        if let WorkerCommand::Job(job) = command {
+            let _ = job
+                .respond_to
+                .send(worker_error_response(0, "PHP worker stopped".to_string()));
+        }
+    }
 }

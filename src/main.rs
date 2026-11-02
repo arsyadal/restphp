@@ -1,9 +1,13 @@
+#[cfg(feature = "hot-reload")]
+mod reload;
+
 use clap::{Parser, Subcommand};
 use restphp::{
     server::{ServerConfig, ServerControl, DEFAULT_MAX_BODY_BYTES, DEFAULT_MAX_QUEUE},
+    tls::TlsOptions,
     ExecutionTarget, WorkerHandle,
 };
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{future::Future, path::Path, sync::Arc, time::Duration};
 
 #[derive(Parser)]
 #[command(name = "restphp")]
@@ -25,13 +29,17 @@ struct Cli {
     /// Evaluate PHP code directly from memory (e.g. `restphp -e 'echo 123;'`)
     #[arg(short = 'e', long = "eval")]
     eval: Option<String>,
-    /// Watch mode is temporarily unavailable while process-safe reload is redesigned.
+    /// Restart the server process when PHP sources or application configuration change.
     #[arg(long)]
     watch: bool,
     #[command(subcommand)]
     command: Option<Commands>,
 }
 
+#[expect(
+    clippy::large_enum_variant,
+    reason = "Parse startup options inline without a heap allocation"
+)]
 #[derive(Subcommand)]
 enum Commands {
     /// Start the RestPHP HTTP server
@@ -42,6 +50,11 @@ enum Commands {
         port: u16,
         #[arg(short, long, default_value = "public/index.php")]
         entrypoint: String,
+        /// Boot a PHP callback worker once instead of executing a file per request.
+        #[arg(long, value_name = "PHP")]
+        persistent_worker: Option<String>,
+        #[command(flatten)]
+        tls: TlsOptions,
         /// Must be 1 for the current NTS PHP runtime.
         #[arg(short, long, default_value_t = 1)]
         workers: usize,
@@ -54,10 +67,10 @@ enum Commands {
         /// Maximum jobs waiting for or executing on the PHP worker.
         #[arg(long, default_value_t = DEFAULT_MAX_QUEUE)]
         max_queue: usize,
-        /// Maximum seconds to wait for accepted requests during shutdown.
+        /// Maximum seconds to drain HTTP requests and stop the PHP worker during shutdown.
         #[arg(long, default_value_t = 30)]
         shutdown_timeout_secs: u64,
-        /// Watch mode is temporarily unavailable while process-safe reload is redesigned.
+        /// Restart the server process when PHP sources or application configuration change.
         #[arg(long)]
         watch: bool,
     },
@@ -96,6 +109,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             host,
             port,
             entrypoint,
+            persistent_worker,
+            tls,
             workers,
             max_requests,
             max_body_bytes,
@@ -106,6 +121,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             host,
             port,
             entrypoint,
+            persistent_worker,
+            tls,
             workers,
             max_requests,
             max_body_bytes,
@@ -128,6 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 host: cli.host.unwrap_or_else(|| "0.0.0.0".to_string()),
                 port: cli.port.unwrap_or(8080),
                 entrypoint,
+                persistent_worker: None,
+                tls: TlsOptions::default(),
                 workers: cli.workers.unwrap_or(1),
                 max_requests: 0,
                 max_body_bytes: DEFAULT_MAX_BODY_BYTES,
@@ -138,19 +157,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    if options.watch {
-        return Err(
-            "--watch is temporarily unavailable while process-safe reload is redesigned".into(),
-        );
-    }
     if options.shutdown_timeout_secs == 0 {
         return Err("--shutdown-timeout-secs must be greater than zero".into());
     }
+    if options.watch {
+        #[cfg(feature = "hot-reload")]
+        return reload::run(Duration::from_secs(options.shutdown_timeout_secs)).await;
+        #[cfg(not(feature = "hot-reload"))]
+        return Err("--watch requires building RestPHP with the hot-reload feature".into());
+    }
 
-    let entrypoint = std::fs::canonicalize(&options.entrypoint).map_err(|error| {
+    let effective_entrypoint = options
+        .persistent_worker
+        .as_ref()
+        .unwrap_or(&options.entrypoint);
+    let entrypoint = std::fs::canonicalize(effective_entrypoint).map_err(|error| {
         format!(
             "Entrypoint '{}' does not exist or cannot be resolved: {error}",
-            options.entrypoint
+            effective_entrypoint
         )
     })?;
     if !entrypoint.is_file() {
@@ -169,17 +193,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     config
         .validate()
         .map_err(|error| format!("Invalid server configuration: {error}"))?;
+    if options.workers != 1 {
+        return Err("the NTS PHP runtime requires --workers 1".into());
+    }
+    let tls = options.tls.prepare().await?;
 
-    let worker =
+    // Zend snapshots process signal handlers during initialization.
+    let termination_signal = shutdown_signal();
+    let worker = if options.persistent_worker.is_some() {
+        WorkerHandle::new_persistent(
+            std::path::PathBuf::from(&entrypoint),
+            options.max_requests,
+            options.max_queue,
+        )
+    } else {
         WorkerHandle::new_pool_with_queue(options.workers, options.max_requests, options.max_queue)
-            .map_err(|error| format!("Worker init failed: {error}"))?;
+    }
+    .map_err(|error| format!("Worker init failed: {error}"))?;
     let mut drain_notifier = worker.drain_notifier();
     let worker = Arc::new(tokio::sync::RwLock::new(worker));
     let control = ServerControl::new();
     let shutdown_control = control.clone();
+    let (shutdown_started_tx, shutdown_started_rx) = tokio::sync::oneshot::channel();
     let shutdown = async move {
         tokio::select! {
-            _ = shutdown_signal() => tracing::info!("Shutdown signal received; draining RestPHP"),
+            _ = termination_signal => tracing::info!("Shutdown signal received; draining RestPHP"),
             result = drain_notifier.changed() => {
                 if result.is_ok() && *drain_notifier.borrow() {
                     tracing::info!("Request recycle limit reached; draining for supervisor restart");
@@ -187,30 +225,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         shutdown_control.close_admission();
+        let _ = shutdown_started_tx.send(tokio::time::Instant::now());
     };
 
-    let server = restphp::server::run_http_server_with_config_and_shutdown(
-        &options.host,
-        options.port,
+    let server = restphp::server::run_server_with_config_and_shutdown(
+        (options.host.parse::<std::net::IpAddr>()?, options.port).into(),
         &entrypoint,
         Arc::clone(&worker),
         config,
         control,
+        tls,
         shutdown,
     );
-    let outcome =
-        tokio::time::timeout(Duration::from_secs(options.shutdown_timeout_secs), server).await;
+    let completion = async {
+        let result = server.await;
+        // Joining Zend may block even after its HTTP client has disconnected.
+        tokio::task::spawn_blocking(move || worker.blocking_write().shutdown()).await?;
+        result
+    };
+    tokio::pin!(completion);
 
-    match outcome {
-        Ok(result) => {
-            worker.write().await.shutdown();
-            result?;
-            Ok(())
-        }
+    let shutdown_started = tokio::select! {
+        result = &mut completion => return result,
+        started = shutdown_started_rx => match started {
+            Ok(started) => started,
+            // Startup errors can drop the shutdown future before it is polled.
+            Err(_) => return completion.await,
+        },
+    };
+    let deadline = shutdown_started + Duration::from_secs(options.shutdown_timeout_secs);
+
+    match tokio::time::timeout_at(deadline, &mut completion).await {
+        Ok(result) => result,
         Err(_) => {
-            // PHP execution cannot be safely cancelled from another thread. Do
-            // not call `shutdown()` here: joining an unbounded user script
-            // would defeat the deadline. A supervisor replaces this process.
+            // Neither Zend execution nor an in-progress worker join can be
+            // cancelled safely. Exit without waiting for blocking-task teardown.
             tracing::error!(
                 "Graceful shutdown deadline exceeded; terminating for supervisor restart"
             );
@@ -223,6 +272,8 @@ struct ServeOptions {
     host: String,
     port: u16,
     entrypoint: String,
+    persistent_worker: Option<String>,
+    tls: TlsOptions,
     workers: usize,
     max_requests: u64,
     max_body_bytes: usize,
@@ -231,21 +282,26 @@ struct ServeOptions {
     watch: bool,
 }
 
-async fn shutdown_signal() {
+fn shutdown_signal() -> impl Future<Output = ()> {
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
 
         let mut terminate = signal(SignalKind::terminate()).expect("install SIGTERM handler");
-        tokio::select! {
-            _ = tokio::signal::ctrl_c() => {},
-            _ = terminate.recv() => {},
+        let mut interrupt = signal(SignalKind::interrupt()).expect("install SIGINT handler");
+        async move {
+            tokio::select! {
+                _ = interrupt.recv() => {},
+                _ = terminate.recv() => {},
+            }
         }
     }
     #[cfg(not(unix))]
     {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("install Ctrl-C handler");
+        async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("install Ctrl-C handler");
+        }
     }
 }

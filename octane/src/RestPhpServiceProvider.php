@@ -7,23 +7,17 @@ use RestPhp\Octane\Commands\StartRestPhpCommand;
 
 class RestPhpServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        $this->app->singleton(RestPhpServerProcessInspector::class);
+        $this->app->singleton(RestPhpServerProcessInspector::class, fn ($app) =>
+            new RestPhpServerProcessInspector($app->storagePath('logs/restphp-server-state.json'))
+        );
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                StartRestPhpCommand::class,
-            ]);
+            $this->commands([StartRestPhpCommand::class]);
         }
     }
 }

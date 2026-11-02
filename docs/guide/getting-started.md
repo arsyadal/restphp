@@ -9,7 +9,9 @@ Welcome to **RestPHP**, the persistent application server and runtime for PHP po
 RestPHP runs natively on Linux (x86_64, arm64) and macOS:
 - **PHP**: 8.2, 8.3, or 8.4 (`libphp-embed` / `php-dev`)
 - **Operating System**: Linux kernel 5.4+ or macOS 12+
-- **Rust Toolchain**: 1.75+ (only if compiling from source)
+- **Rust Toolchain**: current stable (only if compiling from source)
+
+Use a linkable PHP **embed** library matching the headers and CPU architecture. Homebrew's Apache `httpd/modules/libphp.so` is a Mach-O bundle, not an embed dylib, and cannot be linked into RestPHP. A PHP CLI installation alone is not sufficient.
 
 ---
 
@@ -64,7 +66,7 @@ restphp -e 'echo "Hello from RestPHP!\n";'
 
 ### 2. Laravel applications
 
-Serve a conventional Laravel application through its `public/index.php` entrypoint. Laravel Octane boot-once persistence is not supported by the current runtime and must not be used for production.
+Serve a conventional Laravel application through `public/index.php`, or install the [Laravel Octane adapter](/frameworks/laravel-octane) for a boot-once application with Octane request sandboxes. Both modes use one NTS PHP worker per process; scale through supervised processes.
 
 ---
 

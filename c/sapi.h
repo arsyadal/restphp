@@ -33,6 +33,7 @@ int restphp_request_shutdown_safe(void);
 /* Safe Script & String Evaluation with Bailout Protection */
 int restphp_eval_string_safe(const char *code, const char *desc);
 int restphp_execute_script_safe(const char *filepath);
+void restphp_set_worker_bridge(void *bridge);
 
 /* Helper for Server Variable Registration */
 void restphp_register_variable(const char *var, const char *val, size_t val_len, void *track_vars_array);

@@ -5,6 +5,7 @@
 //! validated response representation.
 
 use crate::sapi::{ExecutionTarget, MAX_DIAGNOSTIC_BYTES};
+use crate::tls::TlsConfig;
 use crate::worker::{DispatchError, WorkerHandle};
 use axum::{
     body::Bytes,
@@ -14,6 +15,7 @@ use axum::{
     routing::any,
     Router,
 };
+use futures_util::StreamExt;
 use std::{
     future::Future,
     net::SocketAddr,
@@ -97,6 +99,8 @@ pub struct ServerState {
     pub default_script: String,
     control: ServerControl,
     queue: Arc<Semaphore>,
+    is_https: bool,
+    server_port: u16,
 }
 
 impl ServerState {
@@ -111,6 +115,8 @@ impl ServerState {
             default_script: default_script.into(),
             control,
             queue: Arc::new(Semaphore::new(config.max_queue)),
+            is_https: false,
+            server_port: 80,
         }
     }
 
@@ -154,11 +160,41 @@ pub async fn run_http_server_with_config_and_shutdown<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
+    run_server_with_config_and_shutdown(
+        (host.parse::<std::net::IpAddr>()?, port).into(),
+        script_path,
+        worker,
+        config,
+        control,
+        None,
+        shutdown,
+    )
+    .await
+}
+
+/// Serve HTTP or HTTPS with the same bounded admission and graceful drain path.
+pub async fn run_server_with_config_and_shutdown<F>(
+    addr: SocketAddr,
+    script_path: &str,
+    worker: Arc<tokio::sync::RwLock<WorkerHandle>>,
+    config: ServerConfig,
+    control: ServerControl,
+    tls: Option<TlsConfig>,
+    shutdown: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: Future<Output = ()> + Send + 'static,
+{
     config
         .validate()
         .map_err(|err| format!("Invalid HTTP server configuration: {err}"))?;
 
-    let state = Arc::new(ServerState::new(worker, script_path, &config, control));
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    let addr = listener.local_addr()?;
+    let mut state = ServerState::new(worker, script_path, &config, control);
+    state.is_https = tls.is_some();
+    state.server_port = addr.port();
+    let state = Arc::new(state);
     let app = Router::new()
         .fallback(any(handle_php_request))
         // Reject oversized known-length and streamed bodies before `Bytes`
@@ -166,17 +202,66 @@ where
         .layer(DefaultBodyLimit::max(config.max_body_bytes))
         .with_state(state);
 
-    let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    println!("🦀 [RestPHP] Listening on http://{}", addr);
+    let scheme = if tls.is_some() { "https" } else { "http" };
+    println!("🦀 [RestPHP] Listening on {scheme}://{addr}");
     println!(
         "🐘 [RestPHP] Serving persistent PHP entrypoint: {}",
         script_path
     );
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown)
-        .await?;
+    match tls {
+        None => {
+            axum::serve(listener, app)
+                .with_graceful_shutdown(shutdown)
+                .await?;
+        }
+        Some(tls) => {
+            let handle = axum_server::Handle::new();
+            let shutdown_handle = handle.clone();
+            let shutdown = async move {
+                shutdown.await;
+                shutdown_handle.graceful_shutdown(None);
+            };
+            let listener = listener.into_std()?;
+            let serving = async move {
+                match tls {
+                    TlsConfig::Provided(config) => {
+                        axum_server::from_tcp_rustls(listener, config)?
+                            .handle(handle)
+                            .serve(app.into_make_service())
+                            .await
+                    }
+                    TlsConfig::Acme(mut state) => {
+                        let mut config = state.default_rustls_config();
+                        Arc::get_mut(&mut config)
+                            .expect("new ACME rustls config")
+                            .alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+                        let acceptor = state.axum_acceptor(config);
+                        let server = axum_server::from_tcp(listener)?
+                            .acceptor(acceptor)
+                            .handle(handle)
+                            .serve(app.into_make_service());
+                        tokio::pin!(server);
+                        loop {
+                            tokio::select! {
+                                result = &mut server => return result,
+                                event = state.next() => match event {
+                                    Some(Ok(event)) => tracing::info!(?event, "ACME certificate lifecycle"),
+                                    Some(Err(error)) => tracing::error!(?error, "ACME certificate provisioning or renewal failed"),
+                                    None => return Err(std::io::Error::other("ACME certificate lifecycle stopped")),
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            tokio::pin!(serving);
+            tokio::select! {
+                result = &mut serving => result?,
+                _ = shutdown => serving.await?,
+            }
+        }
+    }
     Ok(())
 }
 
@@ -243,7 +328,7 @@ async fn dispatch_php_request(
     let php_response = {
         let worker_guard = state.worker.read().await;
         worker_guard
-            .dispatch_with_headers(
+            .dispatch_with_transport(
                 target,
                 method_str,
                 request_uri,
@@ -252,6 +337,8 @@ async fn dispatch_php_request(
                 header_list,
                 cookie,
                 content_type,
+                state.is_https,
+                state.server_port,
             )
             .await
     };

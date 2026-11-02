@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "RestPHP"
   text: "The Blazing-Fast PHP Runtime"
-  tagline: "PHP runtime powered by Rust with a custom Zend SAPI bridge. Production hardening is in progress."
+  tagline: "PHP runtime powered by Rust with a custom Zend SAPI bridge, boot-once callbacks, and one NTS worker per process."
   actions:
     - theme: brand
       text: Get Started →
@@ -46,7 +46,7 @@ hero:
   <div class="feature-card">
     <div class="feature-icon"><img src="/icons/rocket.svg" alt="Laravel runtime status" /></div>
     <h3 class="feature-title">Laravel support</h3>
-    <p class="feature-desc">Conventional Laravel applications can run through <code>public/index.php</code>. Octane boot-once persistence is not yet supported.</p>
+    <p class="feature-desc">Serve <code>public/index.php</code> with per-request teardown, or boot Laravel once through the <code>restphp/octane</code> adapter and Octane request sandboxes.</p>
   </div>
   <div class="feature-card">
     <div class="feature-icon"><img src="/icons/box.svg" alt="Single Standalone Binary" /></div>
