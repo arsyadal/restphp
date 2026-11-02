@@ -4,7 +4,7 @@
 //! via `#[no_mangle] pub unsafe extern "C"`.
 
 use crate::ffi::{
-    php_register_variable_safe, sapi_globals, zval, SapiHeader, SapiHeaders,
+    restphp_register_variable, sapi_globals, zval, SapiHeader, SapiHeaders,
     SAPI_HEADER_SENT_SUCCESSFULLY,
 };
 use crate::sapi::context::{WorkerRequestContext, MAX_DIAGNOSTIC_BYTES};
@@ -21,8 +21,11 @@ use std::os::raw::{c_char, c_int, c_void};
 #[no_mangle]
 pub unsafe extern "C" fn restphp_rs_ub_write(str: *const c_char, str_length: usize) -> usize {
     let ctx_ptr = sapi_globals.server_context as *mut WorkerRequestContext;
-    if ctx_ptr.is_null() || str.is_null() || str_length == 0 {
+    if str.is_null() || str_length == 0 {
         return 0;
+    }
+    if ctx_ptr.is_null() {
+        return str_length;
     }
 
     let slice = std::slice::from_raw_parts(str.cast::<u8>(), str_length);
@@ -155,7 +158,7 @@ pub unsafe extern "C" fn restphp_rs_register_server_variables(track_vars_array: 
     let ctx = &*ctx_ptr;
     for (k, v) in &ctx.server_vars {
         if let (Ok(ck), Ok(cv)) = (CString::new(k.as_str()), CString::new(v.as_str())) {
-            php_register_variable_safe(ck.as_ptr(), cv.as_ptr(), v.len(), track_vars_array);
+            restphp_register_variable(ck.as_ptr(), cv.as_ptr(), v.len(), track_vars_array.cast());
         }
     }
 }

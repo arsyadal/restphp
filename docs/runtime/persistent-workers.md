@@ -1,53 +1,29 @@
 # Persistent Worker Architecture
 
-RestPHP runs one embedded PHP runtime per process and performs PHP request startup and shutdown for each HTTP request. This is the supported production model for the current non-thread-safe (NTS) PHP build.
+RestPHP hosts one NTS Zend VM on one dedicated OS thread per process. The HTTP listener runs on Tokio; admitted jobs cross a bounded channel and return responses through oneshot channels. `--workers` must be `1`. Scale with multiple supervised processes rather than multiple NTS VMs in a process.
 
----
+## Execution modes
 
-## The Cold Boot Bottleneck in Traditional PHP
+| Mode | Startup | Per HTTP request | Teardown |
+| :--- | :--- | :--- | :--- |
+| Script, `--entrypoint` | Initialize PHP module once | PHP request startup, execute script, PHP request shutdown | Stop module after queue drains |
+| Persistent, `--persistent-worker` | Initialize module, start PHP request, boot script once | Invoke `restphp_handle_request` callback with fresh HTTP context | Finish loop, shut down PHP request and module |
 
-In standard PHP deployments (such as Nginx + PHP-FPM or Apache `mod_php`), every HTTP request causes the web server to:
-1. Spawn or reuse a PHP process.
-2. Initialize the Zend VM engine.
-3. Parse and execute `composer/autoload.php` and thousands of framework class files.
-4. Bootstrap framework service containers, configurations, and route dispatchers.
-5. Execute the business logic and send the response.
-6. Destroy the entire VM state, free memory, and tear down the request.
+A persistent script must reach its first callback before the runtime reports readiness. For Laravel, use the [Octane adapter](/frameworks/laravel-octane), which supplies the framework request sandbox and lifecycle listeners. A custom callback retains its application objects by design; see [state isolation](/runtime/state-reset).
 
-This cycle means that **over 70% of CPU time is wasted re-bootstrapping frameworks**, restricting typical PHP-FPM servers to only a few hundred requests per second.
+## Admission and shutdown
 
----
+`--max-queue` bounds requests waiting for or executing on PHP. Full queues return HTTP 503 rather than blocking Tokio threads. `--max-body-bytes` rejects excess bodies with HTTP 413 before dispatch.
 
-## The RestPHP Runtime Model
+SIGTERM and Ctrl-C close admission, drain accepted requests, wake an idle persistent worker, and join the worker thread. An unrecoverable persistent callback failure stops that worker rather than continuing on potentially corrupted application state. Run RestPHP under a supervisor for replacement.
 
-RestPHP keeps the embedded PHP runtime available in one dedicated worker thread. Incoming requests are admitted through a bounded queue, then execute a complete PHP request lifecycle. NTS PHP has process-global state, so `--workers` is intentionally limited to `1`; scale horizontally with multiple RestPHP processes behind a supervisor or load balancer.
+## Recycling
 
-```mermaid
-graph TD
-    A[Incoming HTTP Request] --> B[Tokio Async Front-End]
-    B --> C[Lock-Free Crossbeam Channel]
-    C --> D[One Worker Thread: PHP Runtime]
-    D --> F[Bailout-Protected Request Lifecycle]
-    F --> G[Oneshot Response Channel]
-    G --> B
-```
-
----
-
-## Worker Recycling (`--max-requests`)
-
-While persistent execution offers massive performance gains, poorly written userland PHP code or third-party packages might have subtle memory leaks in static properties.
-
-RestPHP can ask an external supervisor to recycle the process:
 ```bash
-# Request a graceful process drain after 10,000 requests
-restphp --max-requests 10000
-
-# Run with unlimited worker lifetime
-restphp --max-requests 0
+restphp serve --entrypoint public/index.php --max-requests 10000
+restphp serve --persistent-worker worker.php --max-requests 10000
 ```
 
-When the process reaches its request limit:
-1. It completes its current in-flight request cleanly.
-2. It stops admitting new requests and drains work already accepted.
-3. It exits successfully; systemd, a container orchestrator, or another process supervisor starts a replacement.
+`--max-requests` limits accepted HTTP requests; `0` means unlimited. At the limit, the process closes admission, finishes admitted work, and exits. Recycling replaces the whole process: Zend module shutdown and startup in the same process are not used as a reload strategy.
+
+`--shutdown-timeout-secs` bounds the drain and worker join, starting when shutdown begins. Completion exits `0`; deadline expiry exits `1`. Configure your supervisor to restart after either outcome. Development `--watch` handles source-triggered replacement and successful request-limit recycling itself.

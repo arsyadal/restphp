@@ -21,7 +21,7 @@ This page describes architecture and a reproducible benchmark workflow. RestPHP 
 | **PHP Extension Compatibility** | Varies | Varies | Varies | Varies | **Compatibility matrix pending** |
 | **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Memory Safe (Borrow Checker)** |
 | **Single Binary CLI** | ❌ Needs Nginx + FPM | ✅ Single Binary (`rr`) | ✅ Single Binary | ❌ Needs `.so` extension | **✅ Single Static Binary (`restphp`)** |
-| **Laravel Octane boot-once support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **⚠️ Not yet supported** |
+| **Laravel Octane boot-once support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **Yes, via `restphp/octane` and native callbacks** |
 
 ---
 

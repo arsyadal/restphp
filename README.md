@@ -1,11 +1,11 @@
 # RestPHP 🦀🐘
 
 > **The Blazing-Fast, Persistent Application Server & Runtime for PHP powered by Rust.**  
-> A Rust-hosted PHP runtime with a custom Zend SAPI bridge. Production hardening is in progress.
+> A Rust-hosted PHP runtime with a custom Zend SAPI bridge and one NTS PHP worker per process.
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/php-8.2%20|%208.3%20|%208.4-777bb4.svg)](https://www.php.net/)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org/)
 [![Documentation](https://img.shields.io/badge/docs-vitepress-646cff.svg)](https://arsyadal.github.io/restphp/)
 
 📖 **Official Documentation**: [https://arsyadal.github.io/restphp/](https://arsyadal.github.io/restphp/)
@@ -39,7 +39,7 @@ RestPHP's performance figures are not yet independently validated across identic
 | **PHP Extension Compatibility** | Varies | Varies | Varies | Varies | **Native Zend embedding; compatibility matrix pending** |
 | **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Memory Safe (Borrow Checker)** |
 | **Single Binary CLI** | ❌ Needs Nginx + FPM | ✅ Single Binary (`rr`) | ✅ Single Binary | ❌ Needs `.so` extension | **✅ Single Static Binary (`restphp`)** |
-| **Laravel Octane boot-once support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **⚠️ Not yet supported** |
+| **Laravel Octane boot-once support** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | **Yes, via `restphp/octane` and native callbacks** |
 
 ---
 
@@ -94,9 +94,36 @@ restphp -e 'echo "Hello from RestPHP!\n";'
 
 ### 2. Laravel applications
 
-RestPHP can serve a Laravel application's `public/index.php` through its standard request lifecycle. The `restphp/octane` package is present as an experimental adapter, but boot-once Octane persistence is not yet supported; do not use it for production workloads.
+RestPHP serves Laravel's `public/index.php` through the standard request lifecycle, or boots an application once through the [`restphp/octane`](octane/) adapter. The adapter uses Laravel Octane's worker, request sandbox, and lifecycle listeners rather than reusing a raw HTTP kernel.
 
-### 3. Evaluate Inline PHP Code
+```bash
+# Conventional request lifecycle
+restphp serve --entrypoint public/index.php
+
+# After installing the local Composer adapter in a Laravel application
+php artisan octane:restphp start --binary /path/to/restphp --max-requests 10000
+```
+
+One NTS PHP worker runs per process. Scale with supervised processes. Script mode tears down PHP request state each time; persistent mode retains application state deliberately and requires Octane-compatible application code.
+
+### 3. HTTPS and development reload
+
+```bash
+restphp serve --entrypoint public/index.php --port 8443 \
+  --tls-cert /private/fullchain.pem --tls-key /private/privkey.pem
+
+restphp serve --entrypoint public/index.php --port 443 \
+  --acme-domain app.example.com --acme-contact admin@example.com \
+  --acme-cache /private/restphp-acme --acme-staging
+
+restphp serve --entrypoint public/index.php --watch
+```
+
+ACME provisions and renews certificates through TLS-ALPN-01: use your own public DNS name and route inbound TCP 443 to this listener. Staging certificates are untrusted; omit `--acme-staging` for production. Persist the private cache (Unix mode `0700`). No HTTP redirect listener is started.
+
+SIGTERM, Ctrl-C, and request-limit recycling close admission and drain accepted work. `--shutdown-timeout-secs` bounds draining and worker teardown; use a process supervisor for replacement. `--watch` debounces PHP/config changes and drains the old child before starting a fresh process, never reinitializing Zend in place. See [CLI documentation](docs/guide/cli-commands.md) for limits and flags.
+
+### 4. Evaluate Inline PHP Code
 
 ```bash
 restphp -e 'echo "PHP Version: " . PHP_VERSION . "\n";'
@@ -137,8 +164,8 @@ graph TD
 - [x] **Milestone 1**: Zend Engine C-FFI Core Embedding (Verified in memory)
 - [x] **Milestone 2**: Custom SAPI Implementation (`ub_write`, `send_headers`, superglobals)
 - [x] **Milestone 3**: Async Tokio HTTP Server & REST routing (Verified with live `curl`)
-- [ ] **Milestone 4 follow-up**: Production lifecycle hardening and a real Laravel Octane boot-once bridge.
-- [x] **Milestone 5**: Micro-benchmarks vs FrankenPHP, TechEmpower configs, Hot Reload & VitePress Docs ([`benchmarks/`](benchmarks/))
+- [x] **Milestone 4 follow-up**: Bounded admission, graceful lifecycle/recycling, and a native Laravel Octane boot-once bridge.
+- [x] **Milestone 5**: Micro-benchmarks vs FrankenPHP, TechEmpower configs, process-safe Hot Reload, rustls/ACME HTTPS & VitePress Docs ([`benchmarks/`](benchmarks/))
 
 See [`ROADMAP.md`](ROADMAP.md) for granular task tracking.
 
@@ -146,5 +173,5 @@ See [`ROADMAP.md`](ROADMAP.md) for granular task tracking.
 
 ## 📜 License
 
-Dual licensed under MIT OR Apache-2.0.  
+Dual licensed under [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE), at your option.
 Authored by [Arsyad Alghital](https://github.com/arsyadal).
