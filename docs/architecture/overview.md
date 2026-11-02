@@ -52,5 +52,7 @@ Standard PHP communicates with web servers through Server Application Programmin
 - Converts incoming Axum requests into lightweight `WorkerJob` envelopes dispatched across lock-free channels.
 
 ### 4. Dedicated Persistent Worker Actors (`src/worker.rs`)
-- Because the standard PHP engine in NTS mode is not thread-safe, each worker runs in its own **dedicated OS thread**.
-- Workers maintain persistent Zend VM instances, running `php_request_startup()` -> handle -> `php_request_shutdown()` with full bailout protection (`zend_first_try` / `zend_catch`).
+- One dedicated OS thread hosts the NTS Zend VM; `--workers` must be `1`. Horizontal scaling uses separate supervised processes.
+- Script mode runs `php_request_startup()` -> script -> `php_request_shutdown()` for each HTTP request.
+- Persistent mode boots a callback script once and refreshes the HTTP context between callbacks. The Laravel adapter delegates application isolation to Octane's request sandbox.
+- Shutdown, request-limit recycling, and development reload drain work before replacing the process; Zend is not reinitialized in place.

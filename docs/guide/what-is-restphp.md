@@ -2,7 +2,7 @@
 
 **RestPHP** is a modern, ultra-high-performance persistent application server and runtime for PHP, written in Rust.
 
-**Important Positioning:** RestPHP is a standalone runtime for plain PHP and conventional framework entrypoints. Laravel Octane boot-once persistence is not implemented in the current runtime.
+**Runtime modes:** RestPHP serves plain PHP and conventional framework entrypoints with a complete PHP request lifecycle, or runs boot-once callback workers through `--persistent-worker`. The Laravel adapter uses Octane's request sandbox and lifecycle listeners.
 
 ---
 

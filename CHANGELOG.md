@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Native `restphp_handle_request()` callback mode with boot-once readiness, fresh HTTP state between requests, C-contained bailout handling, and graceful process recycling.
+- Laravel Octane integration using the real worker sandbox and lifecycle listeners, with Artisan start/status/reload/stop supervision and locked process ownership.
+- Opt-in rustls HTTPS with provided PEM keys or automatic ACME certificate provisioning and renewal through TLS-ALPN-01, plus transport-derived PHP HTTPS metadata.
+- Process-safe `--watch` reload: debounce source/config changes, drain the old child, and start a new process without reinitializing Zend in place.
+- Complete MIT and Apache-2.0 license texts for the runtime and Composer adapter; align documentation package license metadata.
+
+
 ### Fixed
+- Start the graceful shutdown deadline only when shutdown begins, covering HTTP draining and PHP worker teardown without limiting healthy server uptime.
+- Register shutdown signal handlers before Zend initialization so SIGTERM and SIGINT still trigger graceful shutdown between PHP requests.
 - Load PHP configuration and scanned extension settings instead of disabling them, allowing standard Laravel applications to boot with their configured extensions.
 - Retain bounded per-request SAPI diagnostics and log failed output with distinct PHP and HTTP status fields, while preserving generic HTTP 500 responses.
 - Preserve PHP shutdown-handler failure status so fatal errors during request teardown also produce a generic HTTP 500.

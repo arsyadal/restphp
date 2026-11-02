@@ -11,6 +11,9 @@ tokio = { version = "1.38", features = ["full"] }
 axum = { version = "0.7", features = ["tokio", "http1", "http2"] }
 hyper = { version = "1.4", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
+axum-server = { version = "0.8", default-features = false, features = ["tls-rustls-no-provider"] }
+rustls-acme = { version = "0.15.4", default-features = false, features = ["axum", "ring", "tls12", "webpki-roots"] }
+futures-util = "0.3"
 bytes = "1.6"
 crossbeam-channel = "0.5"
 clap = { version = "4.5", features = ["derive"] }

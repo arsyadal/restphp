@@ -2,7 +2,7 @@
     "name": "restphp/octane",
     "description": "Ultra-high-performance Laravel Octane adapter for RestPHP powered by Rust",
     "keywords": ["laravel", "octane", "restphp", "rust", "performance", "runtime", "server"],
-    "license": "MIT",
+    "license": ["MIT", "Apache-2.0"],
     "authors": [
         {
             "name": "Arsyad Alghital",

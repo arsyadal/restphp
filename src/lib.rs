@@ -1,6 +1,7 @@
 pub mod ffi;
 pub mod sapi;
 pub mod server;
+pub mod tls;
 pub mod worker;
 
 pub use sapi::{ExecutionTarget, PhpEngine, PhpResponse, WorkerRequestContext};

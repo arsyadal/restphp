@@ -55,6 +55,9 @@ extern "C" {
     /// Returns 0 on success, or PHP `exit_status` on bailout/error.
     pub fn restphp_execute_script_safe(filepath: *const c_char) -> c_int;
 
+    /// Installs the worker-thread bridge while a persistent bootstrap executes.
+    pub fn restphp_set_worker_bridge(bridge: *mut c_void);
+
     /// Returns current `SG(server_context)` pointer.
     pub fn restphp_get_server_context() -> *mut c_void;
 

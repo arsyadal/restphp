@@ -10,6 +10,9 @@ use crate::ffi;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static ENGINE_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// Target for script execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,7 +49,14 @@ impl PhpEngine {
     ///
     /// Must be called once on the dedicated worker thread.
     pub fn init() -> Result<Self, String> {
+        if ENGINE_ACTIVE
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return Err("Only one NTS PHP VM may be active in a process".to_string());
+        }
         if unsafe { ffi::restphp_sapi_init() } != 0 {
+            ENGINE_ACTIVE.store(false, Ordering::Release);
             return Err("PHP module startup failed".to_string());
         }
         tracing::info!("✅ [PhpEngine] RestPHP SAPI initialized successfully.");
@@ -235,5 +245,6 @@ impl Drop for PhpEngine {
         unsafe {
             ffi::restphp_sapi_teardown();
         }
+        ENGINE_ACTIVE.store(false, Ordering::Release);
     }
 }
