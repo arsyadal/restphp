@@ -1,6 +1,13 @@
 use axum_server::tls_rustls::RustlsConfig;
-use rustls_acme::{caches::DirCache, AcmeConfig, AcmeState};
-use std::{io, path::PathBuf};
+use rustls_acme::{
+    caches::DirCache,
+    rustls::{
+        self,
+        pki_types::{pem::PemObject, CertificateDer},
+    },
+    AcmeConfig, AcmeState,
+};
+use std::{io, path::PathBuf, sync::Arc};
 
 /// TLS is opt-in; ACME and a provided certificate are mutually exclusive.
 #[derive(clap::Args, Default)]
@@ -23,6 +30,12 @@ pub struct TlsOptions {
     /// Use Let's Encrypt staging (certificates are not publicly trusted).
     #[arg(long)]
     pub acme_staging: bool,
+    /// Custom HTTPS ACME directory (cannot be combined with --acme-staging).
+    #[arg(long, value_name = "HTTPS_URL")]
+    pub acme_directory: Option<String>,
+    /// PEM roots trusted only for the custom ACME directory's HTTPS API.
+    #[arg(long, value_name = "PEM")]
+    pub acme_ca_cert: Option<PathBuf>,
 }
 
 pub enum TlsConfig {
@@ -38,11 +51,34 @@ impl TlsOptions {
         let acme_options = !self.acme_domain.is_empty()
             || !self.acme_contact.is_empty()
             || self.acme_cache.is_some()
-            || self.acme_staging;
+            || self.acme_staging
+            || self.acme_directory.is_some()
+            || self.acme_ca_cert.is_some();
         if self.tls_cert.is_some() && acme_options {
             return Err("provided PEM certificates cannot be combined with ACME options".into());
         }
         if acme_options {
+            if self.acme_staging && self.acme_directory.is_some() {
+                return Err("--acme-directory cannot be combined with --acme-staging".into());
+            }
+            if self.acme_ca_cert.is_some() && self.acme_directory.is_none() {
+                return Err("--acme-ca-cert requires --acme-directory".into());
+            }
+            if let Some(directory) = &self.acme_directory {
+                let uri = directory
+                    .parse::<hyper::Uri>()
+                    .map_err(|_| "--acme-directory must be an absolute HTTPS URL")?;
+                if uri.scheme_str() != Some("https")
+                    || uri.host().is_none_or(str::is_empty)
+                    || uri
+                        .authority()
+                        .is_some_and(|authority| authority.as_str().contains('@'))
+                {
+                    return Err(
+                        "--acme-directory must be an absolute HTTPS URL without credentials".into(),
+                    );
+                }
+            }
             if self.acme_domain.is_empty()
                 || self.acme_contact.is_empty()
                 || self.acme_cache.is_none()
@@ -118,12 +154,30 @@ impl TlsOptions {
                 format!("mailto:{email}")
             }
         });
-        let state = AcmeConfig::new(self.acme_domain)
+        let mut config = AcmeConfig::new(self.acme_domain)
             .contact(contacts)
             .cache(DirCache::new(cache))
-            .directory_lets_encrypt(!self.acme_staging)
-            .state();
-        Ok(Some(TlsConfig::Acme(state)))
+            .directory_lets_encrypt(!self.acme_staging);
+        if let Some(directory) = self.acme_directory {
+            config = config.directory(directory);
+        }
+        if let Some(path) = self.acme_ca_cert {
+            let mut roots = rustls::RootCertStore::empty();
+            for certificate in CertificateDer::pem_file_iter(path)? {
+                roots.add(certificate?)?;
+            }
+            if roots.is_empty() {
+                return Err("--acme-ca-cert must contain at least one CA certificate".into());
+            }
+            let client = rustls::ClientConfig::builder_with_provider(
+                rustls::crypto::ring::default_provider().into(),
+            )
+            .with_safe_default_protocol_versions()?
+            .with_root_certificates(roots)
+            .with_no_client_auth();
+            config = config.client_tls_config(Arc::new(client));
+        }
+        Ok(Some(TlsConfig::Acme(config.state())))
     }
 }
 
@@ -169,6 +223,27 @@ mod tests {
         options.tls_cert = Some("cert.pem".into());
         options.tls_key = Some("key.pem".into());
         assert!(options.validate().is_err());
+    }
+
+    #[test]
+    fn validates_custom_directory_and_scoped_trust() {
+        let mut options = acme_options();
+        options.acme_ca_cert = Some("ca.pem".into());
+        assert!(options.validate().is_err());
+        options.acme_directory = Some("https://localhost:14000/dir".into());
+        assert!(options.validate().is_ok());
+        options.acme_staging = true;
+        assert!(options.validate().is_err());
+        options.acme_staging = false;
+        for directory in [
+            "http://localhost/dir",
+            "/dir",
+            "https://user@localhost/dir",
+            "",
+        ] {
+            options.acme_directory = Some(directory.into());
+            assert!(options.validate().is_err(), "{directory}");
+        }
     }
 
     #[test]

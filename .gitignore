@@ -14,6 +14,8 @@ Cargo.lock
 *.log
 scratch/
 .agents/
+__pycache__/
+*.pyc
 
 # Node / Docs
 docs/node_modules/

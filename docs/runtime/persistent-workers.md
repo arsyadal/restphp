@@ -27,3 +27,12 @@ restphp serve --persistent-worker worker.php --max-requests 10000
 `--max-requests` limits accepted HTTP requests; `0` means unlimited. At the limit, the process closes admission, finishes admitted work, and exits. Recycling replaces the whole process: Zend module shutdown and startup in the same process are not used as a reload strategy.
 
 `--shutdown-timeout-secs` bounds the drain and worker join, starting when shutdown begins. Completion exits `0`; deadline expiry exits `1`. Configure your supervisor to restart after either outcome. Development `--watch` handles source-triggered replacement and successful request-limit recycling itself.
+
+## Mixed-traffic soak validation
+
+```bash
+python3 tests/run_soak.py --binary target/release/restphp \
+  --duration-secs 1800 --recycle-interval-secs 600 --output scratch/soak-report.json
+```
+
+`tests/run_soak.py` exercises mixed plain, JSON, binary, form, multipart upload, session, recoverable exception, active client-disconnect, and process-replacement workloads against `--persistent-worker`. It checks peak RSS and open file descriptor growth across samples, verifies upload temp-file cleanup, confirms active requests complete during SIGTERM draining, and verifies that an unrecoverable callback failure stops the worker without exposing partial output.

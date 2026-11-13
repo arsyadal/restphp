@@ -70,6 +70,8 @@ ACME uses Let's Encrypt and TLS-ALPN-01. Public DNS must point to this server, a
 
 ACME and manually supplied PEM options are mutually exclusive. RestPHP does not start an HTTP-to-HTTPS redirect listener.
 
+For a private or test ACME authority, pass `--acme-directory <https-url>` instead of `--acme-staging`. When that authority is signed by a private root, pass `--acme-ca-cert <pem>` to trust it only for the ACME client connection.
+
 ## Evaluate PHP
 
 ```bash

@@ -23,7 +23,7 @@ export default defineConfig({
       { text: 'Benchmarks', link: '/benchmarks/comparison' },
       { text: 'Roadmap', link: '/roadmap' },
       {
-        text: 'v0.1.0',
+        text: 'v0.2.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/arsyadal/restphp/releases' },
           { text: 'Contributing', link: 'https://github.com/arsyadal/restphp/blob/main/CONTRIBUTING.md' },

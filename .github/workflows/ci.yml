@@ -2,37 +2,91 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  test:
-    name: Build & Test
-    runs-on: ubuntu-latest
+  rust:
+    name: Rust / PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.2", "8.3", "8.4"]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libclang-dev php-dev libphp-embed
-
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: ./.github/actions/setup-php-embed
+        with:
+          php-version: ${{ matrix.php }}
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-
-      - name: Check Formatting
+      - name: Check formatting
         run: cargo fmt --all -- --check
-
-      - name: Run Clippy Linter
+      - name: Run Clippy
         run: cargo clippy -- -D warnings
-
       - name: Build RestPHP
         run: cargo build --verbose
-
-      - name: Run Tests
-        # Zend's embed SAPI owns process-global state, so Rust test binaries must
-        # not exercise it from parallel test threads.
+      - name: Run Rust regressions
+        # The NTS embed VM is process-global: serialize test cases.
         run: cargo test --verbose -- --test-threads=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: restphp-php${{ matrix.php }}
+          path: target/debug/restphp
+          if-no-files-found: error
+      - name: Run benchmark parser and process regressions
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+  laravel:
+    name: Laravel ${{ matrix.laravel }} / PHP ${{ matrix.php }} / Octane 2
+    needs: rust
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Laravel 10 supports PHP 8.1-8.3; Laravel 11/12 support 8.2-8.4.
+          - {php: "8.2", laravel: "10"}
+          - {php: "8.2", laravel: "11"}
+          - {php: "8.2", laravel: "12"}
+          - {php: "8.3", laravel: "10"}
+          - {php: "8.3", laravel: "11"}
+          - {php: "8.3", laravel: "12"}
+          - {php: "8.4", laravel: "11"}
+          - {php: "8.4", laravel: "12"}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-php-embed
+        with:
+          php-version: ${{ matrix.php }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: restphp-php${{ matrix.php }}
+          path: target/debug
+      - run: chmod +x target/debug/restphp
+      - name: Exercise genuine Laravel application and supervisor
+        run: >-
+          python3 tests/run_laravel_integration.py
+          --laravel '${{ matrix.laravel }}'
+          --binary target/debug/restphp
+          --output 'laravel-${{ matrix.laravel }}-php${{ matrix.php }}.json'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: laravel-${{ matrix.laravel }}-php${{ matrix.php }}-results
+          path: laravel-${{ matrix.laravel }}-php${{ matrix.php }}.json
+          if-no-files-found: warn
+
+  test:
+    name: Build & Test
+    if: always()
+    needs: [rust, laravel]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every compatibility job to pass
+        env:
+          RUST_RESULT: ${{ needs.rust.result }}
+          LARAVEL_RESULT: ${{ needs.laravel.result }}
+        run: test "$RUST_RESULT" = success && test "$LARAVEL_RESULT" = success

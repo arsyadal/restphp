@@ -49,14 +49,15 @@ Unlike RoadRunner, which serializes PSR-7 HTTP requests and responses over stand
 
 ---
 
-## 🧪 Reproducing the Benchmarks
+## 🧪 Reproducing the Controlled Comparison
 
-All benchmarks can be reproduced using standard benchmarking tools (`wrk` or `k6`) against the identical JSON endpoint:
+Use `benchmarks/Dockerfile` and `benchmarks/run.py` so both runtimes execute the same PHP release, INI profile, payload, worker count, and cgroup resource limits:
 
 ```bash
-# Benchmark RestPHP
-wrk -t12 -c400 -d30s http://127.0.0.1:8080/
-
-# Benchmark FrankenPHP
-wrk -t12 -c400 -d30s http://127.0.0.1:8081/
+docker build -f benchmarks/Dockerfile -t restphp-comparison .
+docker run --rm --init --network none --cpus 2 --memory 2g --pids-limit 128 \
+  -v "$PWD/benchmarks/results:/app/benchmarks/results" restphp-comparison
+php benchmarks/report.php benchmarks/results/<run-id>/results.json
 ```
+
+See [Benchmark Methodology](/benchmarks/methodology) for the preflight compatibility checks, percentile parser rules, and measured 2-CPU container figures.

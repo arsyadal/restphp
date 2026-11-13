@@ -181,6 +181,22 @@ echo 'shutdown-output-must-not-leak';
 }
 
 #[test]
+fn persistent_worker_resets_execution_timeout_for_each_request_and_idle_wait() {
+    let mut server = Server::start(
+        "<?php set_time_limit(1); while (restphp_handle_request(function () { usleep(600000); echo 'ok'; })) {}",
+        3,
+    );
+    for _ in 0..3 {
+        let response = request(server.port, "GET", "/", "", "");
+        assert!(
+            response.starts_with("HTTP/1.1 200") && response.ends_with("ok"),
+            "{response}"
+        );
+    }
+    server.wait_exit();
+}
+
+#[test]
 fn shutdown_wakes_idle_native_callback_and_runs_outer_finally() {
     let mut server = Server::start("<?php try { while (restphp_handle_request(function () { echo 'ok'; })) {} } finally { file_put_contents(__DIR__.'/terminated', 'yes'); }", 0);
     assert!(request(server.port, "GET", "/", "", "").ends_with("ok"));

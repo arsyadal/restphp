@@ -427,7 +427,10 @@ fn build_php_response(
             }
         }
     }
-    response_headers.insert(header::SERVER, HeaderValue::from_static("RestPHP/0.1.0"));
+    response_headers.insert(
+        header::SERVER,
+        HeaderValue::from_static(concat!("RestPHP/", env!("CARGO_PKG_VERSION"))),
+    );
     response
 }
 
@@ -492,7 +495,7 @@ mod tests {
         assert!(response.headers().get(header::CONTENT_LENGTH).is_none());
         assert_eq!(
             response.headers().get(header::SERVER).unwrap(),
-            "RestPHP/0.1.0"
+            concat!("RestPHP/", env!("CARGO_PKG_VERSION"))
         );
         assert_eq!(
             response

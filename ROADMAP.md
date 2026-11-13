@@ -38,7 +38,7 @@
 - [x] Complete MIT and Apache-2.0 license texts for the runtime and Composer adapter, with consistent package metadata.
 
 ## Verification boundary
-- Runtime verification: PHP 8.2.30 NTS on macOS arm64; 60 Rust tests passed, including native callback, HTTPS transport, and process-reload regressions.
-- Authentic framework smoke: Laravel 12.70.2 / Octane 2.22.0, stable boot token/PID, scoped-service cleanup, request isolation, exception recovery, recycling, and Artisan process controls.
-- HTTPS verified locally with a trusted test certificate. Public ACME issuance/renewal requires an owned public DNS name and reachable TCP 443; it was not exercised against a public issuer in this environment.
-- Benchmark and TechEmpower entries track tooling/configuration availability, not independently validated performance or acceptance by TechEmpower. Other PHP/framework versions and production extension combinations require deployment validation.
+- Runtime verification: PHP 8.2.30 NTS on macOS arm64; 62 Rust tests and 21 Python boundary tests passed, plus CI matrix coverage across PHP 8.2, 8.3, and 8.4.
+- Authentic framework regressions: Laravel 10.50.4, 11.57.1, and 12.70.2 with Octane 2.22.0 passed locally (boot-once, scoped-service cleanup, request isolation, exception recovery, recycling, and Artisan start/status/reload/stop), with CI matrix coverage across PHP 8.2/8.3/8.4.
+- HTTPS and ACME verification: verified locally with provided PEM certificates and a full TLS-ALPN-01 issuance, restart cache-reuse, and scheduled renewal cycle against official Pebble v2.8.0 (720 continuous verified HTTPS probes, 0 failures). Public Let's Encrypt issuance still requires an owned public DNS name and reachable TCP 443.
+- Mixed-traffic soak and benchmark verification: 1,800-second persistent-worker soak passed (188,144 operations, 1,175 active disconnects, 2 scheduled process replacements, 0 KiB post-warmup RSS growth, 0 FD growth, 0 leaked upload files), and a controlled 2-CPU/2-GiB container comparison against FrankenPHP v1.13.4 on PHP 8.2.35 recorded exact p50/p95/p99 histograms and RSS. TechEmpower files remain configuration artifacts, not official submission results.

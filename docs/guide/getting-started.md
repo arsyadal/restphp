@@ -27,7 +27,7 @@ Verify your installation:
 
 ```bash
 restphp --version
-# Output: restphp 0.1.0
+# Output: restphp 0.2.0
 ```
 
 ### Option 2: Build from Source with Cargo
@@ -45,6 +45,15 @@ cargo build --release
 
 # Install binary to /usr/local/bin
 sudo cp target/release/restphp /usr/local/bin/
+```
+
+When multiple PHP versions are installed, set `PHP_CONFIG`, `PHP_EMBED_LIB_NAME`, and `PHP_EMBED_LIB_DIR` before building so the headers and `libphp` match:
+
+```bash
+PHP_CONFIG=/usr/bin/php-config8.3 \
+PHP_EMBED_LIB_NAME=php8.3 \
+PHP_EMBED_LIB_DIR=/usr/lib \
+cargo build --release
 ```
 
 ---

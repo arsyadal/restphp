@@ -532,6 +532,8 @@ PHP_FUNCTION(restphp_handle_request) {
             ZVAL_COPY(&restphp_boot_server, server);
         }
         restphp_reset_http_state();
+        /* Idle waiting between callbacks must not consume max_execution_time. */
+        zend_unset_timeout();
     } zend_catch {
         success = false;
     } zend_end_try();
@@ -543,6 +545,9 @@ PHP_FUNCTION(restphp_handle_request) {
     /* This callback only waits and installs non-owning pointers; no Zend calls. */
     if (!restphp_rs_worker_next(restphp_worker_bridge)) {
         restphp_worker_stopped = true;
+        if (EG(timeout_seconds) > 0) {
+            zend_set_timeout(EG(timeout_seconds), 1);
+        }
         RETURN_FALSE;
     }
 
@@ -555,6 +560,9 @@ PHP_FUNCTION(restphp_handle_request) {
         EG(exit_status) = 0;
         restphp_reset_superglobals();
         restphp_request_modules(true);
+        if (EG(timeout_seconds) > 0) {
+            zend_set_timeout(EG(timeout_seconds), 1);
+        }
         fci.retval = &retval;
         fci.param_count = 0;
         fci.params = NULL;
