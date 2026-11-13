@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://arsyadal.github.io/restphp/
+    about: Read the official RestPHP guides and CLI reference

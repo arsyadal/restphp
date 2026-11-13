@@ -55,7 +55,7 @@ Verify your installation:
 
 ```bash
 restphp --version
-# Output: restphp 0.1.0
+# Output: restphp 0.2.0
 ```
 
 ### Option 2: Build from Source with Cargo
@@ -168,6 +168,15 @@ graph TD
 - [x] **Milestone 5**: Micro-benchmarks vs FrankenPHP, TechEmpower configs, process-safe Hot Reload, rustls/ACME HTTPS & VitePress Docs ([`benchmarks/`](benchmarks/))
 
 See [`ROADMAP.md`](ROADMAP.md) for granular task tracking.
+
+---
+
+## 🤝 Contributing
+
+Contributions, bug reports, and feature requests are welcome!
+
+- **Issues**: Found a bug or have a feature idea? Open a [GitHub Issue](https://github.com/arsyadal/restphp/issues/new/choose).
+- **Pull Requests**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local build setup, formatting (`cargo fmt`), linting (`cargo clippy`), and test instructions.
 
 ---
 

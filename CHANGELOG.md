@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-13
 
 ### Added
 - Native `restphp_handle_request()` callback mode with boot-once readiness, fresh HTTP state between requests, C-contained bailout handling, and graceful process recycling.
@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Opt-in rustls HTTPS with provided PEM keys or automatic ACME certificate provisioning and renewal through TLS-ALPN-01, plus transport-derived PHP HTTPS metadata.
 - Process-safe `--watch` reload: debounce source/config changes, drain the old child, and start a new process without reinitializing Zend in place.
 - Complete MIT and Apache-2.0 license texts for the runtime and Composer adapter; align documentation package license metadata.
+- Compatibility CI matrix across PHP 8.2, 8.3, and 8.4 plus authentic Laravel 10, 11, and 12 Octane lifecycle regressions (`tests/run_laravel_integration.py`).
+- Fail-closed `wrk` histogram parser (`benchmarks/wrk.py`), Lua percentile reporter (`benchmarks/percentiles.lua`), and controlled RestPHP vs FrankenPHP container comparison (`benchmarks/Dockerfile`, `benchmarks/run.py`).
+- Scoped custom ACME directory and CA trust flags (`--acme-directory`, `--acme-ca-cert`) with end-to-end Pebble TLS-ALPN-01 issuance, cache-reuse, and renewal verification (`tests/run_acme_e2e.py`).
+- Mixed-traffic persistent-worker soak harness and resource-budget verifier (`tests/run_soak.py`, `tests/test_soak_metrics.py`).
 
 
 ### Fixed
@@ -22,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Retain bounded per-request SAPI diagnostics and log failed output with distinct PHP and HTTP status fields, while preserving generic HTTP 500 responses.
 - Preserve PHP shutdown-handler failure status so fatal errors during request teardown also produce a generic HTTP 500.
 - Dependabot automation no longer requests an Actions-generated approval and skips auto-merge cleanly when the repository setting is disabled.
+- Reset PHP `max_execution_time` per persistent callback and pause the timer while waiting for the next request so cumulative worker uptime does not trigger a 30-second fatal timeout.
+- Never substitute mean `wrk` latency when `99%` histogram output is absent; reject or mark missing percentiles explicitly.
 
 ## [0.1.0] - 2026-09-05
 

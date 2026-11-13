@@ -1,0 +1,17 @@
+{
+  "pebble": {
+    "listenAddress": "127.0.0.1:14000",
+    "managementListenAddress": "127.0.0.1:15000",
+    "httpPort": 5002,
+    "tlsPort": 5001,
+    "certificate": "test/certs/localhost/cert.pem",
+    "privateKey": "test/certs/localhost/key.pem",
+    "profiles": {
+      "default": {
+        "description": "Real short-lived certificates for renewal integration",
+        "validityPeriod": 120
+      }
+    },
+    "retryAfter": {"authz": 1, "order": 1}
+  }
+}

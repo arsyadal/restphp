@@ -281,7 +281,7 @@ fn test_tier1_cli_version() {
         .expect("Failed to execute restphp --version");
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("0.1.0"));
+    assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
 }
 
 #[test]
@@ -349,7 +349,10 @@ fn test_tier1_default_endpoint_get_root() {
     let resp =
         send_http_request(server.port, "GET", "/", &[], None).expect("Request should succeed");
     assert_eq!(resp.status_code, 200);
-    assert_eq!(resp.header("server"), Some("RestPHP/0.1.0"));
+    assert_eq!(
+        resp.header("server"),
+        Some(concat!("RestPHP/", env!("CARGO_PKG_VERSION")))
+    );
     let json = resp.json().expect("Body should be JSON");
     assert_eq!(json["status"], "ok");
     assert_eq!(json["engine"], "RestPHP");
@@ -394,7 +397,10 @@ fn test_tier1_superglobals_server_vars() {
     assert_eq!(json["server"]["REQUEST_METHOD"], "POST");
     assert_eq!(json["server"]["REQUEST_URI"], "/api/data?debug=1");
     assert_eq!(json["server"]["QUERY_STRING"], "debug=1");
-    assert_eq!(json["server"]["SERVER_SOFTWARE"], "RestPHP/0.1.0");
+    assert_eq!(
+        json["server"]["SERVER_SOFTWARE"],
+        concat!("RestPHP/", env!("CARGO_PKG_VERSION"))
+    );
 }
 
 #[test]
@@ -612,7 +618,10 @@ fn test_tier3_php_response_filters_hop_by_hop_headers_but_keeps_cookies() {
             "PHP must not forward hop-by-hop header {forbidden}"
         );
     }
-    assert_eq!(response.header("server"), Some("RestPHP/0.1.0"));
+    assert_eq!(
+        response.header("server"),
+        Some(concat!("RestPHP/", env!("CARGO_PKG_VERSION")))
+    );
     let cookies: Vec<_> = response
         .headers
         .iter()

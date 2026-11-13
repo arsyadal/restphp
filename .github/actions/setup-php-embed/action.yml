@@ -1,0 +1,33 @@
+name: Matching PHP CLI and embed
+description: Install a versioned NTS embed library, development headers, and CLI
+inputs:
+  php-version:
+    description: PHP major.minor version
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install matching PHP packages
+      shell: bash
+      env:
+        PHP_VERSION: ${{ inputs.php-version }}
+      run: |
+        set -euo pipefail
+        case "$PHP_VERSION" in 8.2|8.3|8.4) ;; *) echo 'Unsupported PHP version' >&2; exit 1 ;; esac
+        sudo add-apt-repository -y ppa:ondrej/php
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config libclang-dev composer \
+          "php${PHP_VERSION}-cli" "php${PHP_VERSION}-dev" "libphp${PHP_VERSION}-embed" \
+          "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" \
+          "php${PHP_VERSION}-curl" "php${PHP_VERSION}-sqlite3"
+        test -f "/usr/lib/libphp${PHP_VERSION}.so"
+        "/usr/bin/php${PHP_VERSION}" -r 'if (PHP_ZTS || !extension_loaded("pcntl") || !extension_loaded("posix")) { exit(1); } echo PHP_VERSION, PHP_EOL;'
+        {
+          echo "PHP_BINARY=/usr/bin/php${PHP_VERSION}"
+          echo "PHP_CONFIG=/usr/bin/php-config${PHP_VERSION}"
+          echo "PHP_EMBED_LIB_NAME=php${PHP_VERSION}"
+          echo 'PHP_EMBED_LIB_DIR=/usr/lib'
+          echo "PHPRC=/etc/php/${PHP_VERSION}/cli/php.ini"
+          echo "PHP_INI_SCAN_DIR=/etc/php/${PHP_VERSION}/cli/conf.d"
+          echo 'COMPOSER=/usr/bin/composer'
+        } >> "$GITHUB_ENV"

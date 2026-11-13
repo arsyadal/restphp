@@ -12,7 +12,7 @@ use std::{future::Future, path::Path, sync::Arc, time::Duration};
 #[derive(Parser)]
 #[command(name = "restphp")]
 #[command(about = "The Blazing-Fast, Persistent Application Server & Runtime for PHP")]
-#[command(version = "0.1.0")]
+#[command(version)]
 struct Cli {
     /// Optional PHP script to execute or serve (e.g. `restphp index.php`)
     #[arg(value_name = "FILE")]

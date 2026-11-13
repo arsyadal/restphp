@@ -38,6 +38,6 @@ The development of **RestPHP** follows a strict multi-phase architecture bluepri
 
 ## Verified scope
 
-The current runtime passed 60 Rust tests on PHP 8.2.30 NTS / macOS arm64. A separate Laravel 12.70.2 / Octane 2.22.0 smoke verified stable boot/PID, request and scoped-service isolation, exception recovery, recycling, and Artisan status/reload/stop.
+The current runtime passed 62 Rust tests and 21 Python boundary tests on PHP 8.2.30 NTS / macOS arm64, with CI workflows covering PHP 8.2, 8.3, and 8.4 alongside Laravel 10, 11, and 12. Local authentic regressions passed against Laravel 10.50.4, 11.57.1, and 12.70.2 with Octane 2.22.0.
 
-HTTPS was exercised with a trusted local certificate. Public ACME issuance needs an owned public DNS name and TCP 443 reaching the TLS listener; issuance against a public certificate authority was not exercised here. Benchmark tooling and TechEmpower configurations do not establish comparative performance or official acceptance. Validate other framework versions and production extension combinations for your deployment.
+HTTPS and ACME were exercised both with provided PEM certificates and against official Pebble v2.8.0 for real TLS-ALPN-01 issuance, restart cache reuse, and scheduled short-lived certificate renewal (720 continuous verified HTTPS probes, 0 failed samples). Public Let's Encrypt issuance still needs an owned public DNS name and inbound TCP 443. A 1,800-second mixed-traffic persistent soak completed 188,144 operations with 0 KiB post-warmup RSS growth and 0 FD growth, and the controlled 2-CPU/2-GiB container benchmark compared RestPHP against FrankenPHP v1.13.4 on PHP 8.2.35 using observed `wrk` histograms.

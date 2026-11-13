@@ -37,7 +37,7 @@ Start runs in the foreground as a supervisor. It holds a locked state file, repl
 | `--shutdown-timeout-secs` | `30` | Drain deadline |
 | `--watch` | Off | Debounced development source reload with fresh processes |
 
-The command also forwards `--tls-cert`, `--tls-key`, `--acme-domain` (repeatable), `--acme-contact` (repeatable), `--acme-cache`, and `--acme-staging`. PEM certificates and ACME options are mutually exclusive. ACME needs public DNS, inbound TCP 443 reaching the TLS listener unchanged, and a durable private cache (Unix mode `0700`). Staging certificates are untrusted.
+The command also forwards `--tls-cert`, `--tls-key`, `--acme-domain` (repeatable), `--acme-contact` (repeatable), `--acme-cache`, `--acme-directory`, `--acme-ca-cert`, and `--acme-staging`. PEM certificates and ACME options are mutually exclusive. ACME needs public DNS, inbound TCP 443 reaching the TLS listener unchanged, and a durable private cache (Unix mode `0700`). Staging certificates are untrusted; `--acme-directory` and `--acme-ca-cert` target a private or test ACME authority without changing global TLS trust.
 
 The current NTS runtime supports **one worker per process**. There is no multi-threaded `--workers` option in this adapter; scale with separate supervised processes.
 

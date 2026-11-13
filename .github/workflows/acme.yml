@@ -1,0 +1,45 @@
+name: ACME lifecycle
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pebble:
+    name: Real TLS-ALPN issuance and renewal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-php-embed
+        with:
+          php-version: '8.3'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.2'
+          cache: false
+      - name: Install official pinned Pebble and DNS server
+        run: |
+          go install github.com/letsencrypt/pebble/v2/cmd/pebble@v2.8.0
+          go install github.com/letsencrypt/pebble/v2/cmd/pebble-challtestsrv@v2.8.0
+      - name: Build RestPHP with matching embed PHP
+        run: cargo build
+      - name: Exercise real ACME issuance, restart and scheduled renewal
+        run: python3 tests/run_acme_e2e.py --binary target/debug/restphp --output "${RUNNER_TEMP}/restphp-acme-evidence"
+      - name: Retain public certificate metadata and lifecycle logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acme-lifecycle-evidence
+          path: |
+            ${{ runner.temp }}/restphp-acme-evidence/result.json
+            ${{ runner.temp }}/restphp-acme-evidence/*.log
+          if-no-files-found: ignore
+          retention-days: 7

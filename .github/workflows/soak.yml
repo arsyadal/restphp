@@ -1,0 +1,55 @@
+name: Persistent Worker Soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: "Duration in seconds (1800 or more is a soak; shorter runs are smoke tests)"
+        required: true
+        default: "1800"
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'c/**'
+      - 'build.rs'
+      - 'Cargo.toml'
+      - 'tests/run_soak.py'
+      - 'tests/test_soak_metrics.py'
+      - 'tests/fixtures/soak_worker.php'
+      - '.github/actions/setup-php-embed/**'
+      - '.github/workflows/soak.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    name: Persistent Worker Soak
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-php-embed
+        with:
+          php-version: '8.4'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release runtime
+        run: cargo build --release
+      - name: Test resource budget boundaries
+        run: python3 -m unittest discover -s tests -p 'test_soak_metrics.py'
+      - name: Run mixed-traffic soak or PR smoke
+        env:
+          REQUESTED_DURATION: ${{ inputs.duration }}
+        run: |
+          duration="${REQUESTED_DURATION:-30}"
+          python3 tests/run_soak.py --binary target/release/restphp \
+            --duration-secs "$duration" --recycle-interval-secs 10 \
+            --disconnect-every-batches 2 --output scratch/soak-report.json
+      - name: Upload resource and lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: persistent-worker-soak
+          path: scratch/soak-report.json
+          if-no-files-found: warn

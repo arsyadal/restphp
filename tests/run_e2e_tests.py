@@ -187,10 +187,10 @@ class E2ETestRunner:
         t0 = time.time()
         try:
             res = subprocess.run([bin_path, "--version"], capture_output=True, text=True, timeout=3)
-            passed = res.returncode == 0 and "0.1.0" in res.stdout
-            self.record("T1.1.2", 1, "CLI --version returns version 0.1.0", passed, res.stderr, time.time() - t0)
+            passed = res.returncode == 0 and "0.2.0" in res.stdout
+            self.record("T1.1.2", 1, "CLI --version returns version 0.2.0", passed, res.stderr, time.time() - t0)
         except Exception as e:
-            self.record("T1.1.2", 1, "CLI --version returns version 0.1.0", False, str(e), time.time() - t0)
+            self.record("T1.1.2", 1, "CLI --version returns version 0.2.0", False, str(e), time.time() - t0)
 
         # Test 1.1.3: CLI Serve Subcommand Help
         t0 = time.time()

@@ -1,5 +1,51 @@
 {
-  "hello_plaintext": { "req_sec": "42223.05", "latency": "2.37ms" },
-  "json_api": { "req_sec": "33728.15", "latency": "5.52ms" },
-  "heavy_compute": { "req_sec": "3760.75", "latency": "11.02ms" }
+  "schema_version": 2,
+  "provenance": "historical-unverified",
+  "status": "historical",
+  "comparative": false,
+  "note": "These are pre-existing historical artifacts, not regenerated measurements. Their environment, runtime versions, errors, warmup and resource controls were not retained. Legacy generic latency strings have been discarded, not promoted to p99. Raw *_wrk.txt files are unchanged historical evidence, not proof of present performance. Run benchmarks/run.sh for a new schema-v2 evidence directory.",
+  "runs": [
+    {
+      "runtime": "restphp",
+      "scenario": "hello_plaintext",
+      "repetition": null,
+      "status": "historical-unverified",
+      "measurement": {
+        "requests_per_second": 42223.05,
+        "requests": 215309,
+        "latency_ms": {"p50": null, "p95": null, "p99": null},
+        "errors": {"total": null},
+        "rss_bytes": {"peak_sampled": null},
+        "raw_log": "hello_plaintext_wrk.txt"
+      }
+    },
+    {
+      "runtime": "restphp",
+      "scenario": "json_api",
+      "repetition": null,
+      "status": "historical-unverified",
+      "measurement": {
+        "requests_per_second": 33728.15,
+        "requests": 171997,
+        "latency_ms": {"p50": null, "p95": null, "p99": null},
+        "errors": {"total": null},
+        "rss_bytes": {"peak_sampled": null},
+        "raw_log": "json_api_wrk.txt"
+      }
+    },
+    {
+      "runtime": "restphp",
+      "scenario": "heavy_compute",
+      "repetition": null,
+      "status": "historical-unverified",
+      "measurement": {
+        "requests_per_second": 3760.75,
+        "requests": 18832,
+        "latency_ms": {"p50": null, "p95": null, "p99": null},
+        "errors": {"total": null},
+        "rss_bytes": {"peak_sampled": null},
+        "raw_log": "heavy_compute_wrk.txt"
+      }
+    }
+  ]
 }

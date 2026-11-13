@@ -24,6 +24,8 @@ class StartRestPhpCommand extends Command
         {--acme-domain=* : DNS names for automatic TLS}
         {--acme-contact=* : ACME contact emails}
         {--acme-cache= : Private certificate and account cache directory}
+        {--acme-directory= : Explicit HTTPS directory URL for a private or test ACME CA}
+        {--acme-ca-cert= : PEM root CA trusted only for the custom ACME directory}
         {--acme-staging : Use the untrusted ACME staging issuer}';
 
     protected $description = 'Manage the boot-once RestPHP Octane process supervisor';
@@ -87,7 +89,7 @@ class StartRestPhpCommand extends Command
         if ($this->option('watch')) {
             $command[] = '--watch';
         }
-        foreach (['tls-cert', 'tls-key', 'acme-cache', 'acme-domain', 'acme-contact'] as $name) {
+        foreach (['tls-cert', 'tls-key', 'acme-cache', 'acme-directory', 'acme-ca-cert', 'acme-domain', 'acme-contact'] as $name) {
             foreach ((array) $this->option($name) as $value) {
                 if ($value !== null && $value !== '') {
                     $command[] = '--'.$name;

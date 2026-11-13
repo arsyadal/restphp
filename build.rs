@@ -4,28 +4,36 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=c/sapi.c");
     println!("cargo:rerun-if-changed=c/sapi.h");
+    println!("cargo:rerun-if-env-changed=PHP_CONFIG");
+    println!("cargo:rerun-if-env-changed=PHP_EMBED_LIB_NAME");
+    println!("cargo:rerun-if-env-changed=PHP_EMBED_LIB_DIR");
 
-    // Discover linker search paths via php-config --ldflags
-    if let Ok(ldflags_output) = Command::new("php-config").arg("--ldflags").output() {
-        let ldflags_str = String::from_utf8_lossy(&ldflags_output.stdout);
-        for flag in ldflags_str.split_whitespace() {
-            if let Some(path) = flag.strip_prefix("-L") {
-                println!("cargo:rustc-link-search=native={}", path);
-            }
+    let php_config = std::env::var_os("PHP_CONFIG").unwrap_or_else(|| "php-config".into());
+    let config = |option: &str| {
+        let output = Command::new(&php_config)
+            .arg(option)
+            .output()
+            .expect("Failed to execute PHP_CONFIG (default: php-config). Install matching PHP development headers.");
+        assert!(output.status.success(), "PHP_CONFIG {option} failed");
+        String::from_utf8(output.stdout).expect("PHP_CONFIG output must be UTF-8")
+    };
+    for flag in config("--ldflags").split_whitespace() {
+        if let Some(path) = flag.strip_prefix("-L") {
+            println!("cargo:rustc-link-search=native={path}");
         }
     }
-    println!("cargo:rustc-link-search=native=/usr/lib");
-    println!("cargo:rustc-link-search=native=/usr/lib/x86_64-linux-gnu");
-    println!("cargo:rustc-link-search=native=/usr/lib/php/20240924");
-    println!("cargo:rustc-link-lib=php");
+    if let Some(directory) = std::env::var_os("PHP_EMBED_LIB_DIR") {
+        println!(
+            "cargo:rustc-link-search=native={}",
+            std::path::PathBuf::from(directory).display()
+        );
+    }
+    let library = std::env::var("PHP_EMBED_LIB_NAME").unwrap_or_else(|_| "php".into());
+    println!("cargo:rustc-link-lib={library}");
 
-    // Discover include paths via php-config --includes
-    let output = Command::new("php-config")
-        .arg("--includes")
-        .output()
-        .expect("Failed to execute php-config. Ensure php-dev or libphp-embed is installed.");
+    let includes = config("--includes");
 
-    let includes_str = String::from_utf8_lossy(&output.stdout);
+    let includes_str = includes.as_str();
     let mut build = cc::Build::new();
     build.file("c/sapi.c");
 

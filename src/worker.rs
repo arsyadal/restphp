@@ -550,7 +550,10 @@ fn build_server_vars(job: &WorkerJob) -> Vec<(String, String)> {
     vars.push(("REQUEST_METHOD".to_string(), method.to_string()));
     vars.push(("REQUEST_URI".to_string(), request_uri));
     vars.push(("QUERY_STRING".to_string(), query.to_string()));
-    vars.push(("SERVER_SOFTWARE".to_string(), "RestPHP/0.1.0".to_string()));
+    vars.push((
+        "SERVER_SOFTWARE".to_string(),
+        concat!("RestPHP/", env!("CARGO_PKG_VERSION")).to_string(),
+    ));
     vars.push(("SERVER_PROTOCOL".to_string(), "HTTP/1.1".to_string()));
     vars.push(("GATEWAY_INTERFACE".to_string(), "CGI/1.1".to_string()));
     vars.push(("SERVER_NAME".to_string(), "restphp".to_string()));

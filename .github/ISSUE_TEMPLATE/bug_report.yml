@@ -1,0 +1,73 @@
+name: Bug Report
+description: Report a crash, incorrect behavior, or regression in RestPHP
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include enough detail so we can reproduce it.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal PHP script, CLI command, or steps to reproduce the issue.
+      placeholder: |
+        1. Run `restphp serve --entrypoint index.php`
+        2. Send `curl http://127.0.0.1:8080/`
+        3. Observe error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs Actual Behavior
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+
+  - type: input
+    id: restphp_version
+    attributes:
+      label: RestPHP Version
+      description: Output of `restphp --version` or commit SHA.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: php_version
+    attributes:
+      label: PHP Version
+      options:
+        - "8.4"
+        - "8.3"
+        - "8.2"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System & Architecture
+      placeholder: "Ubuntu 24.04 x86_64 / macOS 15 arm64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Stack Trace
+      description: Relevant terminal output, panic backtrace, or PHP error logs.
+      render: shell
