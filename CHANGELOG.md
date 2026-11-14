@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - A navbar GitHub “Give a star” link with the live star count, refreshed every 60 seconds while visible, and explicit loading/unavailable states.
 - A navbar star icon with a yellow “Starred” state verified against public GitHub stargazers for an optional, browser-remembered username. No login token or assumed star-on-click state is stored.
-- Surface the reported local RestPHP/FrankenPHP RPS and p99 latency comparison near the top of the GitHub README, with environment, provenance limitations, and reproduction links.
+- Surface the reported local RestPHP/FrankenPHP comparison as RPS and p99 latency graphs near the top of the GitHub README, with environment, provenance limitations, and reproduction links.
 
 ### Fixed
 - Render Mermaid architecture diagrams in VitePress instead of showing source code blocks, with diagram colors following the documentation theme.

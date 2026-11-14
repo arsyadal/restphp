@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" role="img" aria-labelledby="title description">
+  <title id="title">Reported local benchmark: p99 latency</title>
+  <desc id="description">Median per-run p99 latency in milliseconds across three runs. Lower is better. Hello plaintext: RestPHP 16.462, FrankenPHP 88.311. JSON API: RestPHP 39.398, FrankenPHP 54.708. Heavy compute: RestPHP 123.170, FrankenPHP 182.632. FrankenPHP v1.13.4, PHP 8.2.35, a 2-CPU and 2-GiB container shared with the load generator. These reported results are not independently validated; see docs/benchmarks/methodology.md.</desc>
+  <style>
+    :root { color-scheme: light dark; --fg: #1f2328; --muted: #57606a; --c1: #c2410c; --c2: #475569; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --muted: #9da7b3; --c1: #fb923c; --c2: #94a3b8; } }
+    text { fill: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; }
+    .title { font-size: 24px; font-weight: 600; }
+    .subtitle { fill: var(--muted); font-size: 14px; }
+    .scenario { font-size: 16px; font-weight: 600; }
+    .value { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .restphp { fill: var(--c1); }
+    .frankenphp { fill: var(--c2); }
+    .grid { fill: none; stroke: var(--muted); stroke-opacity: .18; }
+    .axis { fill: none; stroke: var(--muted); }
+    .tick { fill: var(--muted); font-size: 13px; text-anchor: middle; }
+    .footnote { fill: var(--muted); font-size: 12px; }
+  </style>
+  <text class="title" x="24" y="32">p99 latency (ms)</text>
+  <text class="subtitle" x="24" y="56">Median of per-run p99 · Lower is better · FrankenPHP v1.13.4</text>
+  <path class="grid" d="M190 101V343 M310 101V343 M430 101V343 M550 101V343 M670 101V343"/>
+  <g id="hello-plaintext">
+    <text class="scenario" x="24" y="91">Hello plaintext</text>
+    <g>
+      <text x="40" y="117">RestPHP</text>
+      <rect class="restphp" x="190" y="101" width="39.5088" height="22"/>
+      <text class="value" x="237.5088" y="117">16.462</text>
+    </g>
+    <g>
+      <text x="40" y="147">FrankenPHP</text>
+      <rect class="frankenphp" x="190" y="131" width="211.9464" height="22"/>
+      <text class="value" x="409.9464" y="147">88.311</text>
+    </g>
+  </g>
+  <g id="json-api">
+    <text class="scenario" x="24" y="186">JSON API</text>
+    <g>
+      <text x="40" y="212">RestPHP</text>
+      <rect class="restphp" x="190" y="196" width="94.5552" height="22"/>
+      <text class="value" x="292.5552" y="212">39.398</text>
+    </g>
+    <g>
+      <text x="40" y="242">FrankenPHP</text>
+      <rect class="frankenphp" x="190" y="226" width="131.2992" height="22"/>
+      <text class="value" x="329.2992" y="242">54.708</text>
+    </g>
+  </g>
+  <g id="heavy-compute">
+    <text class="scenario" x="24" y="281">Heavy compute</text>
+    <g>
+      <text x="40" y="307">RestPHP</text>
+      <rect class="restphp" x="190" y="291" width="295.608" height="22"/>
+      <text class="value" x="493.608" y="307">123.170</text>
+    </g>
+    <g>
+      <text x="40" y="337">FrankenPHP</text>
+      <rect class="frankenphp" x="190" y="321" width="438.3168" height="22"/>
+      <text class="value" x="636.3168" y="337">182.632</text>
+    </g>
+  </g>
+  <path class="axis" d="M190 356H670"/>
+  <text class="tick" x="190" y="377">0</text>
+  <text class="tick" x="310" y="377">50</text>
+  <text class="tick" x="430" y="377">100</text>
+  <text class="tick" x="550" y="377">150</text>
+  <text class="tick" x="670" y="377">200</text>
+  <text class="footnote" x="24" y="406">Reported local container results · PHP 8.2.35 · 2 CPUs / 2 GiB · Not independently validated</text>
+</svg>
