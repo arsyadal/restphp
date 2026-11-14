@@ -79,7 +79,7 @@ fn configure_windows(build: &mut cc::Build) {
         include_root.join("main/php.h").is_file(),
         "PHP_DEV_DIR must contain include/main/php.h"
     );
-    for subdir in ["", "main", "Zend", "TSRM", "win32"] {
+    for subdir in ["", "main", "Zend", "TSRM"] {
         build.include(include_root.join(subdir));
     }
     let lib_dir = std::env::var_os("PHP_EMBED_LIB_DIR")
