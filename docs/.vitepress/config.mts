@@ -1,11 +1,16 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/restphp/' : '/',
   title: "RestPHP",
   description: "The Blazing-Fast, Persistent Application Server & Runtime for PHP powered by Rust",
   lastUpdated: true,
   cleanUrls: true,
+  mermaid: {
+    securityLevel: 'strict',
+    theme: 'neutral',
+  },
   head: [
     ['link', { rel: 'icon', href: '/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#f97316' }],
@@ -98,4 +103,4 @@ export default defineConfig({
       provider: 'local'
     }
   }
-})
+}))

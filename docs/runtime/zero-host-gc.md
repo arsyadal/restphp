@@ -31,8 +31,6 @@ graph LR
         R3 --> R4["Flat, Deterministic p99 (1.2ms)"]
     end
 
-    style Rust_RestPHP fill:#0f172a,stroke:#f97316,stroke-width:2px
-    style Go_Runtimes fill:#0f172a,stroke:#64748b,stroke-width:1px
 ```
 
 ---

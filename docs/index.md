@@ -129,8 +129,6 @@ graph LR
         GC2["Zero Host GC (Compile-time RAII)"]
     end
 
-    style RestPHP_Rust fill:#1e293b,stroke:#f97316,stroke-width:3px
-    style FrankenPHP_Go fill:#1e293b,stroke:#64748b,stroke-width:1px
 ```
 
 ---
