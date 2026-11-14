@@ -7,8 +7,68 @@ on:
     branches: ["main"]
 
 jobs:
+  # Branch rules require Build & Test even when only documentation changes.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-24.04
+    outputs:
+      backend: ${{ steps.paths.outputs.backend }}
+      docs: ${{ steps.paths.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          : "${BASE_SHA:?Missing base commit}"
+          : "${HEAD_SHA:?Missing head commit}"
+          if [[ "$BASE_SHA" =~ ^0+$ ]]; then
+            printf 'backend=true\ndocs=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          range="$BASE_SHA..$HEAD_SHA"
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            range="$BASE_SHA...$HEAD_SHA"
+          fi
+          git diff --no-renames --name-only -z "$range" > "$RUNNER_TEMP/ci-changed-paths"
+          backend=false
+          docs=false
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              docs/*|.github/workflows/deploy-docs.yml) docs=true ;;
+              .github/workflows/ci.yml) backend=true; docs=true ;;
+              */*) backend=true ;;
+              *.md) ;;
+              *) backend=true ;;
+            esac
+          done < "$RUNNER_TEMP/ci-changed-paths"
+          printf 'backend=%s\ndocs=%s\n' "$backend" "$docs" >> "$GITHUB_OUTPUT"
+
+  docs:
+    name: Documentation build
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci
+      - run: npm run docs:build
+
   rust:
     name: Rust / PHP ${{ matrix.php }}
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -41,7 +101,8 @@ jobs:
 
   laravel:
     name: Laravel ${{ matrix.laravel }} / PHP ${{ matrix.php }} / Octane 2
-    needs: rust
+    needs: [changes, rust]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -82,11 +143,23 @@ jobs:
   test:
     name: Build & Test
     if: always()
-    needs: [rust, laravel]
+    needs: [changes, docs, rust, laravel]
     runs-on: ubuntu-24.04
     steps:
-      - name: Require every compatibility job to pass
+      - name: Require applicable checks to pass
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BACKEND_CHANGED: ${{ needs.changes.outputs.backend }}
+          DOCS_CHANGED: ${{ needs.changes.outputs.docs }}
+          DOCS_RESULT: ${{ needs.docs.result }}
           RUST_RESULT: ${{ needs.rust.result }}
           LARAVEL_RESULT: ${{ needs.laravel.result }}
-        run: test "$RUST_RESULT" = success && test "$LARAVEL_RESULT" = success
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$BACKEND_CHANGED" = true ]; then
+            test "$RUST_RESULT" = success
+            test "$LARAVEL_RESULT" = success
+          fi
+          if [ "$DOCS_CHANGED" = true ]; then
+            test "$DOCS_RESULT" = success
+          fi
