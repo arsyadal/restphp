@@ -5,6 +5,7 @@ pub use types::*;
 
 use std::os::raw::{c_char, c_int, c_void};
 
+#[cfg_attr(windows, link(name = "php8", kind = "dylib"))]
 extern "C" {
     // =========================================================================
     // Custom SAPI Shim Lifecycle Functions (implemented in c/sapi.c)
