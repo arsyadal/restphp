@@ -16,17 +16,15 @@
 
 These are the local container results reported in the [benchmark methodology](docs/benchmarks/methodology.md#local-container-measurement-php-8235-2-cpus-2-gib-ram), not independently validated results or a production capacity guarantee for the latest release.
 
-| Scenario | RestPHP RPS | FrankenPHP RPS | RestPHP p99 (ms) | FrankenPHP p99 (ms) |
-| :--- | ---: | ---: | ---: | ---: |
-| Hello plaintext | 2,458.95 | 981.66 | 16.462 | 88.311 |
-| JSON API | 2,269.51 | 1,051.84 | 39.398 | 54.708 |
-| Heavy compute | 696.57 | 497.69 | 123.170 | 182.632 |
+![Reported local RestPHP versus FrankenPHP throughput for plaintext, JSON API, and heavy compute. Higher requests per second is better.](docs/public/benchmarks/throughput.svg)
+
+![Reported local RestPHP versus FrankenPHP p99 latency for plaintext, JSON API, and heavy compute. Lower latency in milliseconds is better.](docs/public/benchmarks/p99-latency.svg)
 
 Higher RPS is better; lower p99 latency is better. Each value is the median of three 10-second measurements after a 2-second warmup.
 
 Environment: Linux aarch64, PHP 8.2.35, FrankenPHP v1.13.4, Docker CPU quota of 2 CPUs and 2 GiB RAM, `wrk` with 2 threads and 20 connections, OPcache/JIT disabled. The load generator shares the container's resource limits with the server. The methodology reports zero socket/HTTP errors.
 
-The raw comparative logs for these reported figures are not checked into this repository. The committed [historical results](benchmarks/results/results.json) are explicitly unverified and are not the source of this table. There are no equivalent published measurements here for Swoole, RoadRunner, or Nginx + PHP-FPM, so no numerical ranking against those runtimes is claimed.
+The raw comparative logs for these reported figures are not checked into this repository. The committed [historical results](benchmarks/results/results.json) are explicitly unverified and are not the source of these graphs. There are no equivalent published measurements here for Swoole, RoadRunner, or Nginx + PHP-FPM, so no numerical ranking against those runtimes is claimed.
 
 [Full methodology and reproduction commands](docs/benchmarks/methodology.md) · [Controlled comparison runner](benchmarks/run.py)
 
