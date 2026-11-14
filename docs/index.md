@@ -12,9 +12,6 @@ hero:
     - theme: alt
       text: View Benchmarks
       link: /benchmarks/comparison
-    - theme: alt
-      text: GitHub
-      link: https://github.com/arsyadal/restphp
 ---
 
 <HeroTerminal />
