@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-11-14
 
 ### Added
 - Native Windows x64 MSVC build configuration using official NTS PHP development packs and `php8.lib`.
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid Unix-only SIGPIPE setup on Windows and reject incompatible ZTS headers.
 - Derive integration-test executable paths from Cargo so native `.exe` binaries are exercised.
 - Normalize Rust's Windows verbatim disk/UNC filenames at the PHP ABI boundary so Zend can open canonicalized entrypoints and persistent scripts.
+- Build Linux releases on Ubuntu 24.04 against the same PHP 8.4 NTS packages as compatibility CI, and verify the optimized runtime before publishing.
 
 ## [0.2.0] - 2026-11-13
 

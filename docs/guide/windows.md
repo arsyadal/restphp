@@ -2,6 +2,20 @@
 
 RestPHP's Windows build targets x64 MSVC and PHP 8.2, 8.3, or 8.4 Non Thread Safe (NTS). It embeds `php8.dll` directly; WSL and Docker are not required. Windows ARM64 and 32-bit PHP builds are not supported.
 
+## Download a prebuilt executable
+
+Download `restphp-windows-x86_64.zip` from [RestPHP v0.3.0](https://github.com/arsyadal/restphp/releases/tag/v0.3.0). Install the [x64 Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) if it is not already installed, then extract the whole ZIP into a directory you control.
+
+Open PowerShell in that directory:
+
+```powershell
+.\restphp.exe --version
+.\restphp.exe -e "echo PHP_OS_FAMILY, ':', PHP_VERSION;"
+.\restphp.exe serve --entrypoint C:\apps\my-project\public\index.php --host 127.0.0.1 --port 8080
+```
+
+Replace the entrypoint with your application's PHP file. Keep the bundled DLLs beside `restphp.exe`. This route needs neither Rust nor the PHP development pack.
+
 ## Build from source
 
 Install these prerequisites:

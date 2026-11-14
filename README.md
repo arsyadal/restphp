@@ -55,7 +55,7 @@ Verify your installation:
 
 ```bash
 restphp --version
-# Output: restphp 0.2.0
+# Output: restphp 0.3.0
 ```
 
 ### Option 2: Build from Source with Cargo

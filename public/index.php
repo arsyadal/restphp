@@ -4,7 +4,7 @@ header("X-Powered-By: RestPHP-Rust-Engine");
 echo json_encode([
     "status" => "ok",
     "engine" => "RestPHP",
-    "version" => "0.2.0",
+    "version" => "0.3.0",
     "php_version" => PHP_VERSION,
     "method" => $_SERVER["REQUEST_METHOD"] ?? "GET",
     "uri" => $_SERVER["REQUEST_URI"] ?? "/",
