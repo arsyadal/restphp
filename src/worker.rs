@@ -5,7 +5,7 @@
 //! process supervisor, not multiple threads in this process.
 
 pub use crate::sapi::ExecutionTarget;
-use crate::sapi::{PhpEngine, PhpResponse, WorkerRequestContext};
+use crate::sapi::{php_filename, PhpEngine, PhpResponse, WorkerRequestContext};
 use bytes::Bytes;
 use crossbeam_channel::{bounded, Sender, TrySendError};
 use std::ffi::CString;
@@ -605,7 +605,7 @@ impl ActivePersistentRequest {
                 CString::new(job.uri.as_str())?,
                 CString::new(job.query.as_str())?,
                 job.content_type.as_deref().map(CString::new).transpose()?,
-                CString::new(script.to_string_lossy().as_bytes())?,
+                php_filename(script)?,
             ))
         })();
         let (method, uri, query, content_type, script) = match metadata {

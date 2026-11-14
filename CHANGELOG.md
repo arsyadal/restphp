@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Avoid Unix-only SIGPIPE setup on Windows and reject incompatible ZTS headers.
 - Derive integration-test executable paths from Cargo so native `.exe` binaries are exercised.
+- Normalize Rust's Windows verbatim disk/UNC filenames at the PHP ABI boundary so Zend can open canonicalized entrypoints and persistent scripts.
 
 ## [0.2.0] - 2026-11-13
 

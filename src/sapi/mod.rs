@@ -7,7 +7,7 @@ pub use callbacks::*;
 pub use context::*;
 
 use crate::ffi;
-use std::ffi::CString;
+use std::ffi::{CString, NulError};
 use std::os::raw::{c_char, c_void};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -94,13 +94,9 @@ impl PhpEngine {
             None => None,
         };
         let mut c_path = match path_translated {
-            Some(p) => {
-                Some(CString::new(p.to_string_lossy().as_bytes()).map_err(|e| e.to_string())?)
-            }
+            Some(p) => Some(php_filename(p).map_err(|e| e.to_string())?),
             None => match target {
-                ExecutionTarget::File(p) => {
-                    Some(CString::new(p.to_string_lossy().as_bytes()).map_err(|e| e.to_string())?)
-                }
+                ExecutionTarget::File(p) => Some(php_filename(p).map_err(|e| e.to_string())?),
                 _ => None,
             },
         };
@@ -113,7 +109,7 @@ impl PhpEngine {
             ExecutionTarget::File(path) => (
                 None,
                 None,
-                Some(CString::new(path.to_string_lossy().as_bytes()).map_err(|e| e.to_string())?),
+                Some(php_filename(path).map_err(|e| e.to_string())?),
             ),
         };
 
@@ -247,4 +243,23 @@ impl Drop for PhpEngine {
         }
         ENGINE_ACTIVE.store(false, Ordering::Release);
     }
+}
+
+pub(crate) fn php_filename(path: &Path) -> Result<CString, NulError> {
+    let filename = path.to_string_lossy();
+    // Rust canonicalization adds Win32 verbatim prefixes that Zend's stream
+    // resolver cannot open. Keep Rust's path intact and adapt only the PHP ABI.
+    #[cfg(windows)]
+    if let Some(std::path::Component::Prefix(prefix)) = path.components().next() {
+        match prefix.kind() {
+            std::path::Prefix::VerbatimDisk(_) => {
+                return CString::new(&filename.as_bytes()[4..]);
+            }
+            std::path::Prefix::VerbatimUNC(_, _) => {
+                return CString::new(format!(r"\\{}", &filename[8..]));
+            }
+            _ => {}
+        }
+    }
+    CString::new(filename.as_bytes())
 }
