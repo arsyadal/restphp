@@ -44,7 +44,7 @@ jobs:
           ./target/release/restphp.exe --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $output = ./target/release/restphp.exe -e "echo PHP_OS_FAMILY, ':', PHP_VERSION;"
-          if ($LASTEXITCODE -ne 0 -or $output -notmatch 'Windows:8\.4\.') {
+          if ($LASTEXITCODE -ne 0 -or ($output -join "`n") -notmatch 'Windows:8\.4\.') {
             throw "Native PHP evaluation failed: $output"
           }
       - name: Package executable with matching PHP DLLs
