@@ -65,19 +65,7 @@ impl TestServer {
         extra_args: Vec<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let port = get_ephemeral_port();
-        let bin_path = std::env::current_exe()?
-            .parent()
-            .and_then(|p| p.parent())
-            .map(|p| p.join("restphp"))
-            .unwrap_or_else(|| std::path::PathBuf::from("target/debug/restphp"));
-
-        let final_bin = if bin_path.exists() {
-            bin_path
-        } else {
-            std::path::PathBuf::from("target/debug/restphp")
-        };
-
-        let mut command = Command::new(&final_bin);
+        let mut command = Command::new(env!("CARGO_BIN_EXE_restphp"));
         command
             .arg("serve")
             .arg("--port")
@@ -263,7 +251,7 @@ fn parse_http_response(raw: &[u8]) -> std::io::Result<HttpResponse> {
 
 #[test]
 fn test_tier1_cli_help() {
-    let output = Command::new("target/debug/restphp")
+    let output = Command::new(env!("CARGO_BIN_EXE_restphp"))
         .arg("--help")
         .output()
         .expect("Failed to execute restphp --help");
@@ -275,7 +263,7 @@ fn test_tier1_cli_help() {
 
 #[test]
 fn test_tier1_cli_version() {
-    let output = Command::new("target/debug/restphp")
+    let output = Command::new(env!("CARGO_BIN_EXE_restphp"))
         .arg("--version")
         .output()
         .expect("Failed to execute restphp --version");
@@ -286,7 +274,7 @@ fn test_tier1_cli_version() {
 
 #[test]
 fn test_tier1_cli_eval() {
-    let output = Command::new("target/debug/restphp")
+    let output = Command::new(env!("CARGO_BIN_EXE_restphp"))
         .args(["eval", "echo 'Rust_E2E_Eval_OK';"])
         .output()
         .expect("Failed to execute restphp eval");
@@ -298,7 +286,7 @@ fn test_tier1_cli_eval() {
 #[test]
 fn test_tier1_cli_rejects_multiple_nts_workers_before_listening() {
     let port = get_ephemeral_port().to_string();
-    let output = Command::new("target/debug/restphp")
+    let output = Command::new(env!("CARGO_BIN_EXE_restphp"))
         .args([
             "serve",
             "--port",
@@ -324,7 +312,7 @@ fn test_tier1_missing_entrypoint_fails_before_binding_or_creating_a_file() {
     assert!(!missing_entrypoint.exists());
     let port = get_ephemeral_port().to_string();
 
-    let output = Command::new("target/debug/restphp")
+    let output = Command::new(env!("CARGO_BIN_EXE_restphp"))
         .args([
             "serve",
             "--port",

@@ -68,6 +68,10 @@ extern "C" {
         val_len: usize,
         track_vars_array: *mut c_void,
     );
+}
+
+#[cfg_attr(windows, link(name = "php8", kind = "dylib"))]
+extern "C" {
 
     // =========================================================================
     // Zend Engine & PHP Core Symbols (exported from libphp.so)

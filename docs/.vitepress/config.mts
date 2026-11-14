@@ -36,6 +36,7 @@ export default defineConfig({
         items: [
           { text: 'Welcome to RestPHP', link: '/guide/what-is-restphp' },
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Windows native', link: '/guide/windows' },
           { text: 'CLI Reference', link: '/guide/cli-commands' },
         ]
       },
