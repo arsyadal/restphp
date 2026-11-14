@@ -48,7 +48,17 @@ cargo build
 
 ## Running Checks & Tests
 
-All pull requests are verified by CI (`.github/workflows/ci.yml`). Please run these checks locally before submitting:
+CI routes changes by path. Changes only under `docs/` run the VitePress build, not the Rust/PHP, Laravel, Windows, ACME, or soak suites. Root Markdown-only changes need no runtime build. Mixed frontend/backend changes run both relevant checks. The required `Build & Test` status remains available for every PR; documentation deploys to GitHub Pages after merging.
+
+For frontend/docs changes, run:
+
+```bash
+cd docs
+npm ci
+npm run docs:build
+```
+
+For backend changes, run:
 
 ```bash
 # 1. Format code
@@ -72,7 +82,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 2. **Keep changes focused**: One logical change per PR. Avoid unrelated formatting or refactoring.
 3. **Add tests**: Include regression tests for bug fixes or new behavior where applicable.
 4. **Update docs**: If you change CLI flags, behavior, or architecture, update `README.md` or `docs/` accordingly.
-5. **Pass CI checks**: Ensure `cargo fmt --all -- --check`, `cargo clippy -- -D warnings`, and `cargo test -- --test-threads=1` pass.
+5. **Pass relevant CI checks**: Documentation changes must build with VitePress. Backend changes must pass formatting, Clippy, and runtime tests.
 
 ---
 
