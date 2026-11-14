@@ -10,7 +10,7 @@ export default {
   extends: DefaultTheme,
   Layout() {
     return h(DefaultTheme.Layout, null, {
-      'home-hero-actions-after': () => h(GitHubStars)
+      'nav-bar-content-after': () => h(GitHubStars)
     })
   },
   enhanceApp({ app }) {
