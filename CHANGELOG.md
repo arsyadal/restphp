@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- A documentation homepage “Give a star” link with the live GitHub star count, refreshed every 60 seconds while visible, and explicit loading/unavailable states.
+
 ### Fixed
 - Render Mermaid architecture diagrams in VitePress instead of showing source code blocks, with diagram colors following the documentation theme.
 
