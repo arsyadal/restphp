@@ -12,6 +12,26 @@
 
 ---
 
+## Benchmarks: RPS and p99 latency
+
+These are the local container results reported in the [benchmark methodology](docs/benchmarks/methodology.md#local-container-measurement-php-8235-2-cpus-2-gib-ram), not independently validated results or a production capacity guarantee for the latest release.
+
+| Scenario | RestPHP RPS | FrankenPHP RPS | RestPHP p99 (ms) | FrankenPHP p99 (ms) |
+| :--- | ---: | ---: | ---: | ---: |
+| Hello plaintext | 2,458.95 | 981.66 | 16.462 | 88.311 |
+| JSON API | 2,269.51 | 1,051.84 | 39.398 | 54.708 |
+| Heavy compute | 696.57 | 497.69 | 123.170 | 182.632 |
+
+Higher RPS is better; lower p99 latency is better. Each value is the median of three 10-second measurements after a 2-second warmup.
+
+Environment: Linux aarch64, PHP 8.2.35, FrankenPHP v1.13.4, Docker CPU quota of 2 CPUs and 2 GiB RAM, `wrk` with 2 threads and 20 connections, OPcache/JIT disabled. The load generator shares the container's resource limits with the server. The methodology reports zero socket/HTTP errors.
+
+The raw comparative logs for these reported figures are not checked into this repository. The committed [historical results](benchmarks/results/results.json) are explicitly unverified and are not the source of this table. There are no equivalent published measurements here for Swoole, RoadRunner, or Nginx + PHP-FPM, so no numerical ranking against those runtimes is claimed.
+
+[Full methodology and reproduction commands](docs/benchmarks/methodology.md) · [Controlled comparison runner](benchmarks/run.py)
+
+---
+
 ## ⚡ Why RestPHP?
 
 Traditional PHP operates on a **shared-nothing architecture**: every incoming HTTP request boots the entire framework from scratch and tears down memory afterwards. While persistent runners like **FrankenPHP (Go)** and **RoadRunner (Go)** pioneered worker mode, they face hard limits imposed by the Go runtime:
@@ -32,9 +52,9 @@ RestPHP's performance figures are not yet independently validated across identic
 | **Execution Model** | Cold boot per req | Persistent Worker | Persistent Worker | Coroutine Event Loop | **Persistent Worker (Actor)** |
 | **PHP Binding Method** | FastCGI TCP/Unix socket | IPC Pipes / Protobuf | `cgo` (stack switch cost) | PHP C Extension | **Zero-Cost C-ABI (`extern "C"`)** |
 | **Host Garbage Collection** | None | Go GC (Stop-the-World) | Go GC + PHP GC (**Double GC**) | Manual C++ | **Zero Host GC (Compile-time RAII)** |
-| **Tail Latency (p99)** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **Pending reproducible benchmark** |
+| **Tail Latency (p99)** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **See [reported local results](#benchmarks-rps-and-p99-latency)** |
 | **Base Memory Footprint** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **Pending reproducible benchmark** |
-| **Throughput (RPS)** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **Pending reproducible benchmark** |
+| **Throughput (RPS)** | Varies by workload | Varies by workload | Varies by workload | Varies by workload | **See [reported local results](#benchmarks-rps-and-p99-latency)** |
 | **Async I/O Engine** | epoll | Go netpoller | Go netpoller | Custom epoll/kqueue | **Tokio / Axum (Zero-copy)** |
 | **PHP Extension Compatibility** | Varies | Varies | Varies | Varies | **Native Zend embedding; compatibility matrix pending** |
 | **Host Memory Safety** | C (leaks/overflows) | Safe (Go runtime) | Safe (Go runtime) | ⚠️ Segfault / Leak risks | **100% Memory Safe (Borrow Checker)** |
