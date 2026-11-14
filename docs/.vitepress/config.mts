@@ -92,9 +92,6 @@ export default withMermaid(defineConfig({
         ]
       }
     ],
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/arsyadal/restphp' }
-    ],
     footer: {
       message: 'Released under the MIT / Apache-2.0 License. Powered by Rust & Zend Engine.',
       copyright: 'Copyright © 2026 Arsyad Alghital. All rights reserved.'
