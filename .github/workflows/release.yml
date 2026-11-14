@@ -4,21 +4,25 @@ on:
   push:
     tags:
       - 'v*'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-release:
     name: Build & Release Binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libclang-dev php-dev libphp-embed
+      - uses: ./.github/actions/setup-php-embed
+        with:
+          php-version: '8.4'
 
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -26,16 +30,36 @@ jobs:
       - name: Build Release Binary
         run: cargo build --release
 
+      - name: Verify release runtime
+        run: |
+          target/release/restphp --version
+          target/release/restphp -e 'echo PHP_OS_FAMILY, ":", PHP_VERSION;' | grep 'Linux:8\.4\.'
+
       - name: Package Binary
         run: |
           mkdir -p release-dist
           cp target/release/restphp release-dist/restphp-linux-x86_64
           tar -czf release-dist/restphp-linux-x86_64.tar.gz -C release-dist restphp-linux-x86_64
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: restphp-linux-x86_64
+          path: release-dist/restphp-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build-release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: restphp-linux-x86_64
+          path: release-dist
+      - uses: softprops/action-gh-release@v2
         with:
           files: release-dist/restphp-linux-x86_64.tar.gz
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 [package]
 name = "restphp"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["RestPHP Team"]
 description = "Blazing-fast persistent application server and runtime for PHP powered by Rust"
