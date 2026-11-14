@@ -75,6 +75,15 @@ cargo build --release
 sudo cp target/release/restphp /usr/local/bin/
 ```
 
+```powershell
+# Windows x64 (PowerShell, Rust MSVC, Visual Studio 2022 C++ Build Tools)
+.\scripts\setup-windows-php.ps1 -PhpVersion 8.4
+cargo build --release
+.\target\release\restphp.exe serve --entrypoint public/index.php
+```
+
+See the [native Windows guide](docs/guide/windows.md) for prerequisites, DLL setup, shutdown/reload behavior, and the Unix-only Artisan supervisor limitation.
+
 ---
 
 ## 🚀 Quickstart (Bun-Style Simplicity)

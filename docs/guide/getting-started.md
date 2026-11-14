@@ -6,12 +6,14 @@ Welcome to **RestPHP**, the persistent application server and runtime for PHP po
 
 ## ⚡ System Requirements
 
-RestPHP runs natively on Linux (x86_64, arm64) and macOS:
+RestPHP targets Linux (x86_64, arm64), macOS, and native Windows x64 (MSVC):
 - **PHP**: 8.2, 8.3, or 8.4 (`libphp-embed` / `php-dev`)
-- **Operating System**: Linux kernel 5.4+ or macOS 12+
+- **Operating System**: Linux kernel 5.4+, macOS 12+, or Windows x64
 - **Rust Toolchain**: current stable (only if compiling from source)
 
 Use a linkable PHP **embed** library matching the headers and CPU architecture. Homebrew's Apache `httpd/modules/libphp.so` is a Mach-O bundle, not an embed dylib, and cannot be linked into RestPHP. A PHP CLI installation alone is not sufficient.
+
+Windows links to `php8.dll` using the matching NTS development pack instead of `libphp-embed`. Follow the [Windows native guide](./windows.md) for the PowerShell setup script, build tools, and runtime DLL requirements.
 
 ---
 

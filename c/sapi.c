@@ -25,6 +25,10 @@
 #include <main/php_streams.h>
 #include <ext/standard/php_fopen_wrappers.h>
 
+#ifdef ZTS
+#error "RestPHP requires a non-thread-safe (NTS) PHP build"
+#endif
+
 extern int restphp_rs_worker_next(void *bridge);
 extern void restphp_rs_worker_finish(void *bridge, int success);
 static void *restphp_worker_bridge = NULL;
@@ -185,8 +189,12 @@ int restphp_sapi_init(void) {
     volatile int status = FAILURE;
     volatile bool sapi_initialized = false;
     zend_first_try {
+#ifdef SIGPIPE
         signal(SIGPIPE, SIG_IGN);
+#endif
+#ifdef ZEND_SIGNALS
         zend_signal_startup();
+#endif
         restphp_sapi_module.php_ini_ignore = 0;
         restphp_sapi_module.php_ini_ignore_cwd = 1;
         sapi_startup(&restphp_sapi_module);

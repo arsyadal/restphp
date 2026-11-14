@@ -296,7 +296,20 @@ fn shutdown_signal() -> impl Future<Output = ()> {
             }
         }
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        use tokio::signal::windows::{ctrl_break, ctrl_c};
+
+        let mut interrupt = ctrl_c().expect("install Ctrl-C handler");
+        let mut terminate = ctrl_break().expect("install Ctrl-Break handler");
+        async move {
+            tokio::select! {
+                _ = interrupt.recv() => {},
+                _ = terminate.recv() => {},
+            }
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         async {
             tokio::signal::ctrl_c()

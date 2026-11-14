@@ -64,10 +64,12 @@ pub async fn run(shutdown_timeout: Duration) -> Result<(), Error> {
 }
 
 fn spawn(executable: &Path, args: &[OsString]) -> Result<Child, std::io::Error> {
-    Command::new(executable)
-        .args(args)
-        .kill_on_drop(true)
-        .spawn()
+    let mut command = Command::new(executable);
+    command.args(args).kill_on_drop(true);
+    // CTRL_BREAK must target only this child, never the watcher's console group.
+    #[cfg(windows)]
+    command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP);
+    command.spawn()
 }
 
 async fn stop(child: &mut Child, timeout: Duration) -> Result<ExitStatus, std::io::Error> {
@@ -84,7 +86,14 @@ async fn stop(child: &mut Child, timeout: Duration) -> Result<ExitStatus, std::i
             }
         }
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    if let Some(pid) = child.id() {
+        use windows_sys::Win32::System::Console::{GenerateConsoleCtrlEvent, CTRL_BREAK_EVENT};
+        if unsafe { GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pid) } == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
     child.start_kill()?;
 
     match tokio::time::timeout(timeout + Duration::from_secs(1), child.wait()).await {

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Native Windows x64 MSVC build configuration using official NTS PHP development packs and `php8.lib`.
+- PowerShell setup for matching PHP runtime/SDK archives, with release-manifest SHA-256 verification.
+- Windows PHP 8.2/8.3/8.4 CI, persistent-worker and HTTP regressions, graceful Ctrl-Break/watch lifecycle checks, and packaged Windows release artifacts with matching PHP DLLs.
+- Windows installation guide with explicit runtime requirements and the Unix-only Artisan supervisor boundary.
+
+### Fixed
+- Avoid Unix-only SIGPIPE setup on Windows and reject incompatible ZTS headers.
+- Derive integration-test executable paths from Cargo so native `.exe` binaries are exercised.
+
 ## [0.2.0] - 2026-11-13
 
 ### Added

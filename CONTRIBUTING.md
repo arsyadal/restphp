@@ -32,6 +32,10 @@ sudo apt-get install -y build-essential libphp-embed php-dev pkg-config clang
 
 Install PHP with embed support or use a local NTS PHP build, ensuring `php-config` is on your `PATH`.
 
+#### Windows x64
+
+Use Rust's MSVC toolchain and Visual Studio 2022 C++ Build Tools. Run `.\scripts\setup-windows-php.ps1` from PowerShell to install matching official NTS PHP runtime and development archives, then build in that same terminal. See [Windows native](docs/guide/windows.md) for DLL requirements and the Unix-only Artisan supervisor limitation.
+
 ### Build
 
 ```bash
