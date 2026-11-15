@@ -122,7 +122,7 @@ jobs:
       - uses: ./.github/actions/setup-php-embed
         with:
           php-version: ${{ matrix.php }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: restphp-php${{ matrix.php }}
           path: target/debug
