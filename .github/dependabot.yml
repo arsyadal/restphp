@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    ignore:
+      # rustls-acme 0.15.x implements the axum-server 0.8 Accept trait.
+      # Remove this restriction when rustls-acme supports axum-server 0.9+.
+      - dependency-name: "axum-server"
+        versions: [">=0.9"]
     labels:
       - "dependencies"
       - "rust"
