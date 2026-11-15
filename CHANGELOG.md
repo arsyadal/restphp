@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Surface the reported local RestPHP/FrankenPHP comparison as RPS and p99 latency graphs near the top of the GitHub README, with environment, provenance limitations, and reproduction links.
 
 ### Fixed
+- Keep `axum-server` on 0.8 to match `rustls-acme`'s TLS/ACME acceptor and defer incompatible Dependabot upgrades to 0.9+.
 - Render Mermaid architecture diagrams in VitePress instead of showing source code blocks, with diagram colors following the documentation theme.
 - Place the live star count on the existing top-right navbar GitHub link instead of adding a separate homepage hero button.
 - Route docs-only changes to the VitePress build without starting backend compatibility matrices; retain the required `Build & Test` merge status.
