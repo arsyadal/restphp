@@ -63,7 +63,7 @@ jobs:
           Copy-Item LICENSE, LICENSE-MIT, LICENSE-APACHE -Destination $env:RESTPHP_PHP_RUNTIME
           Copy-Item docs/guide/windows.md "$env:RESTPHP_PHP_RUNTIME\RESTPHP-WINDOWS.md"
           Compress-Archive "$env:RESTPHP_PHP_RUNTIME\*" restphp-windows-x86_64.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.php == '8.4'
         with:
           name: restphp-windows-x86_64

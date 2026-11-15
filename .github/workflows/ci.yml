@@ -91,7 +91,7 @@ jobs:
       - name: Run Rust regressions
         # The NTS embed VM is process-global: serialize test cases.
         run: cargo test --verbose -- --test-threads=1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: restphp-php${{ matrix.php }}
           path: target/debug/restphp
@@ -133,7 +133,7 @@ jobs:
           --laravel '${{ matrix.laravel }}'
           --binary target/debug/restphp
           --output 'laravel-${{ matrix.laravel }}-php${{ matrix.php }}.json'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: laravel-${{ matrix.laravel }}-php${{ matrix.php }}-results

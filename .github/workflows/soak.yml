@@ -48,7 +48,7 @@ jobs:
             --disconnect-every-batches 2 --output scratch/soak-report.json
       - name: Upload resource and lifecycle evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: persistent-worker-soak
           path: scratch/soak-report.json
