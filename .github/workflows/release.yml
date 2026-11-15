@@ -41,7 +41,7 @@ jobs:
           cp target/release/restphp release-dist/restphp-linux-x86_64
           tar -czf release-dist/restphp-linux-x86_64.tar.gz -C release-dist restphp-linux-x86_64
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: startsWith(github.ref, 'refs/tags/')
         with:
           name: restphp-linux-x86_64
